@@ -1,0 +1,24 @@
+/* ── Animation Utilities ── */
+.fade-up {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+.fade-in {
+  opacity: 0;
+}
+
+/* ── Keyframes ── */
+@keyframes scrollPulse {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scaleY(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scaleY(1.1);
+  }
+}
