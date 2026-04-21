@@ -1,4 +1,5 @@
 import Hero from './Hero'
+import ImpactSection from './ImpactSection'
 import HowItWorks from './HowItWorks'
 import MaterialCategory from './MaterialCategory'
 import WhyRestmaterial from './WhyRestmaterial'
@@ -8,6 +9,7 @@ export default function LandingPage() {
   return (
     <main>
       <Hero />
+      <ImpactSection />
       <HowItWorks />
       <MaterialCategory />
       <WhyRestmaterial />
