@@ -305,6 +305,72 @@
   line-height: 1.8;
   font-size: 0.98rem;
 }
+
+/* About additions */
+.about-block--methodology {
+  border-left: 4px solid var(--bus-yellow);
+  background: linear-gradient(90deg, rgba(255, 195, 0, 0.05), transparent);
+}
+.about-values-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+.val-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.8rem 1rem;
+  background: rgba(0, 53, 102, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 53, 102, 0.08);
+  transition: transform 0.2s, border-color 0.2s;
+}
+.val-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 53, 102, 0.15);
+}
+.val-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--oxford);
+  color: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+.val-card h3 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  color: var(--ink-black);
+}
+.val-card p {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #64748b;
+  margin: 0;
+}
+.factor-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+.factor-table th, .factor-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(0, 53, 102, 0.08);
+  text-align: left;
+}
+.factor-table th {
+  font-weight: 800;
+  color: var(--prussian);
+  background: rgba(0, 53, 102, 0.03);
+}
 @media (max-width: 768px) {
 
   .category-grid {
@@ -331,5 +397,9 @@
 
   .hero-cta-group {
     justify-content: center;
+  }
+
+  .about-values-grid {
+    grid-template-columns: 1fr;
   }
 }
