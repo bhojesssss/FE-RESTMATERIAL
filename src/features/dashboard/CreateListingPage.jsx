@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { UploadIcon, SuccessCheckIcon } from '../../assets/icons/CreateListingIcons'
+import FormInput from '../../components/common/FormInput'
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -317,112 +318,104 @@ export default function CreateListingPage() {
         <form className="create-form" onSubmit={onSubmit} noValidate>
 
           {/* Title */}
-          <div id="field-title">
-            <label className="create-label">
-              Listing title *
-              <input
-                className={`create-input${errors.title ? ' input-error' : ''}`}
-                name="title"
-                type="text"
-                placeholder="e.g. Surplus rebar — Jakarta"
-                value={form.title}
-                onChange={handleChange}
-              />
-            </label>
-            {errors.title && <p className="field-error">{errors.title}</p>}
-          </div>
+          <FormInput
+            id="field-title"
+            label="Listing title *"
+            wrapperClass="create-label"
+            inputClass="create-input"
+            name="title"
+            type="text"
+            placeholder="e.g. Surplus rebar — Jakarta"
+            value={form.title}
+            onChange={handleChange}
+            error={errors.title}
+          />
 
           {/* Description */}
-          <div id="field-description">
-            <label className="create-label">
-              Description *
-              <textarea
-                className={`create-textarea${errors.description ? ' input-error' : ''}`}
-                name="description"
-                rows={4}
-                placeholder="Material condition, quantity context, pickup notes, any damage the buyer should know…"
-                value={form.description}
-                onChange={handleChange}
-              />
-            </label>
-            {errors.description && <p className="field-error">{errors.description}</p>}
-          </div>
+          <FormInput
+            id="field-description"
+            label="Description *"
+            wrapperClass="create-label"
+            inputClass="create-textarea"
+            as="textarea"
+            name="description"
+            rows={4}
+            placeholder="Material condition, quantity context, pickup notes, any damage the buyer should know…"
+            value={form.description}
+            onChange={handleChange}
+            error={errors.description}
+          />
 
           {/* Category + Condition */}
           <div className="create-row">
-            <div id="field-category">
-              <label className="create-label">
-                Material type *
-                <select
-                  className={`create-input${errors.category ? ' input-error' : ''}`}
-                  name="category"
-                  value={form.category}
-                  onChange={handleChange}
-                >
-                  <option value="" disabled>Select category</option>
-                  {MATERIAL_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </label>
-              {errors.category && <p className="field-error">{errors.category}</p>}
-            </div>
+            <FormInput
+              id="field-category"
+              label="Material type *"
+              wrapperClass="create-label"
+              inputClass="create-input"
+              as="select"
+              name="category"
+              value={form.category}
+              onChange={handleChange}
+              error={errors.category}
+            >
+              <option value="" disabled>Select category</option>
+              {MATERIAL_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </FormInput>
 
-            <div id="field-condition">
-              <label className="create-label">
-                Condition *
-                <select
-                  className={`create-input${errors.condition ? ' input-error' : ''}`}
-                  name="condition"
-                  value={form.condition}
-                  onChange={handleChange}
-                >
-                  <option value="" disabled>Select condition</option>
-                  {CONDITIONS.map((cond) => (
-                    <option key={cond} value={cond}>{cond}</option>
-                  ))}
-                </select>
-              </label>
-              {errors.condition && <p className="field-error">{errors.condition}</p>}
-            </div>
+            <FormInput
+              id="field-condition"
+              label="Condition *"
+              wrapperClass="create-label"
+              inputClass="create-input"
+              as="select"
+              name="condition"
+              value={form.condition}
+              onChange={handleChange}
+              error={errors.condition}
+            >
+              <option value="" disabled>Select condition</option>
+              {CONDITIONS.map((cond) => (
+                <option key={cond} value={cond}>{cond}</option>
+              ))}
+            </FormInput>
           </div>
 
           {/* FIX 1: City select + Weight */}
           <div className="create-row">
-            <div id="field-city">
-              <label className="create-label">
-                City *
-                <select
-                  className={`create-input${errors.city ? ' input-error' : ''}`}
-                  name="city"
-                  value={form.city}
-                  onChange={handleChange}
-                >
-                  <option value="" disabled>Select city</option>
-                  {CITIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </label>
-              {errors.city && <p className="field-error">{errors.city}</p>}
-            </div>
+            <FormInput
+              id="field-city"
+              label="City *"
+              wrapperClass="create-label"
+              inputClass="create-input"
+              as="select"
+              name="city"
+              value={form.city}
+              onChange={handleChange}
+              error={errors.city}
+            >
+              <option value="" disabled>Select city</option>
+              {CITIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </FormInput>
 
-            <div id="field-weightKg">
-              <label className="create-label">
-                Estimated weight (kg) *
-                <input
-                  className={`create-input${errors.weightKg ? ' input-error' : ''}`}
-                  name="weightKg"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  placeholder="e.g. 100"
-                  value={form.weightKg}
-                  onChange={handleChange}
-                />
-              </label>
-              {errors.weightKg && <p className="field-error">{errors.weightKg}</p>}
-            </div>
+            <FormInput
+              id="field-weightKg"
+              label="Estimated weight (kg) *"
+              wrapperClass="create-label"
+              inputClass="create-input"
+              type="number"
+              name="weightKg"
+              min="0.1"
+              step="0.1"
+              placeholder="e.g. 100"
+              value={form.weightKg}
+              onChange={handleChange}
+              error={errors.weightKg}
+            />
           </div>
 
           {/* CO2 Preview live */}
@@ -448,23 +441,27 @@ export default function CreateListingPage() {
 
           {/* Price — FIX 2: hint hanya muncul kalau bukan free DAN nilai > 0 */}
           <div id="field-priceIdr">
-            <label className="create-label">
-              Price (IDR) *
-              <input
-                className={`create-input${errors.priceIdr ? ' input-error' : ''}`}
-                name="priceIdr"
-                type="number"
-                min="0"
-                step="1000"
-                placeholder="e.g. 500000"
-                value={form.priceIdr}
-                onChange={handleChange}
-                disabled={form.isFree}
-              />
-            </label>
-
-            {!form.isFree && form.priceIdr && parseFloat(form.priceIdr) > 0 && (
-              <p className="create-hint">{formatIdr(form.priceIdr)}</p>
+            {!form.isFree && (
+              <>
+                <FormInput
+                  label="Price (IDR) *"
+                  wrapperClass="create-label"
+                  inputClass="create-input"
+                  style={{ marginTop: '0.5rem' }}
+                  type="number"
+                  name="priceIdr"
+                  min="0"
+                  step="1000"
+                  placeholder="e.g. 500000"
+                  value={form.priceIdr}
+                  onChange={handleChange}
+                  disabled={form.isFree}
+                  error={errors.priceIdr}
+                />
+                {form.priceIdr && parseFloat(form.priceIdr) > 0 && (
+                  <p className="create-hint">{formatIdr(form.priceIdr)}</p>
+                )}
+              </>
             )}
 
             {/* FIX 2: Checkbox sejajar dengan teksnya pakai flexbox */}

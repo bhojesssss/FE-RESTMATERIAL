@@ -336,65 +336,6 @@
   border-color: rgba(0, 53, 102, 0.22);
   color: var(--prussian);
 }
-.profile-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-.profile-metric {
-  background: var(--white);
-  border-radius: 16px;
-  padding: 1.1rem 1.15rem;
-  border: 1px solid rgba(0, 53, 102, 0.08);
-  box-shadow: 0 8px 28px rgba(0, 29, 61, 0.05);
-}
-.profile-metric--accent {
-  background: linear-gradient(135deg, var(--oxford), var(--prussian));
-  color: var(--white);
-  border-color: rgba(0, 53, 102, 0.2);
-}
-.profile-metric--accent .profile-metric-label {
-  color: rgba(255, 255, 255, 0.7);
-}
-.profile-metric--accent .profile-metric-value {
-  color: var(--white);
-}
-.profile-metric--accent .profile-metric-hint {
-  color: rgba(255, 255, 255, 0.55);
-}
-.profile-metric--accent .profile-metric-arrow {
-  color: var(--bus-yellow);
-}
-.profile-metric-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.5rem;
-}
-.profile-metric-label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(0, 29, 61, 0.5);
-}
-.profile-metric-arrow {
-  font-size: 0.85rem;
-  color: rgba(0, 29, 61, 0.25);
-}
-.profile-metric-value {
-  font-size: 1.75rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  color: var(--ink-black);
-  line-height: 1;
-}
-.profile-metric-hint {
-  margin-top: 0.45rem;
-  font-size: 0.78rem;
-  color: #64748b;
-}
 .profile-grid-row {
   display: grid;
   grid-template-columns: 1.2fr 0.9fr 0.9fr;
@@ -1012,9 +953,6 @@
   background: #e53e3e;
 }
 @media (max-width: 1200px) {
-  .profile-metrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
 
   .profile-grid-row,
   .profile-grid-row--2 {

@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { CITIES, CONDITIONS, LISTINGS, MATERIAL_CATEGORIES } from '../../data/marketplace'
-import { PlaceholderImageIcon, EmptySearchIcon } from '../../assets/icons/MarketplaceIcons'
+import { EmptySearchIcon } from '../../assets/icons/MarketplaceIcons'
+import ListingCard from '../../components/shared/ListingCard'
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -207,35 +208,7 @@ export default function MarketplacePage() {
             {filtered.length ? (
               <motion.div className="listing-grid" variants={gridVariants} initial="hidden" animate="show">
                 {filtered.map((l) => (
-                  <motion.article key={l.id} className="listing-card" variants={cardVariants}>
-                    <div className="thumb">
-                      <div className={`status-badge ${l.status === 'Available' ? 'status-ok' : 'status-sold'}`}>
-                        {l.status === 'Available' ? 'Available' : 'Sold'}
-                      </div>
-                      {l.images?.[0] ? <img src={l.images[0]} alt={l.name} /> : (
-                        <div className="thumb-ph" aria-hidden="true">
-                          <PlaceholderImageIcon />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="card-body">
-                      <div className="cat-badge">{l.category}</div>
-                      <div className="card-title" title={l.name}>{l.name}</div>
-                      <div className="card-meta">
-                        {l.city} • {l.volume?.value} {l.volume?.unit}
-                      </div>
-
-                      <div className="card-row">
-                        <span className={`cond-pill ${l.condition.startsWith('New') ? 'cond-new' : l.condition.startsWith('Pre-loved') ? 'cond-pre' : 'cond-repair'}`}>
-                          {l.condition.startsWith('New') ? 'New' : l.condition.startsWith('Pre-loved') ? 'Pre-loved' : 'Needs Repair'}
-                        </span>
-                        <div className="card-price">{formatIdr(l.priceIdr)}</div>
-                      </div>
-
-                      <Link className="card-cta" to={`/marketplace/${l.id}`}>View Details</Link>
-                    </div>
-                  </motion.article>
+                  <ListingCard key={l.id} listing={l} variants={cardVariants} />
                 ))}
               </motion.div>
             ) : (

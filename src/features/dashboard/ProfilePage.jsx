@@ -5,6 +5,7 @@ import { getSession, logout } from '../auth/auth'
 import { weekBars, recentListings, activityRows } from '../../data/profileData'
 import { NavIconDashboard, NavIconMarket, NavIconPlus, NavIconChart, NavIconUsers, NavIconSettings, NavIconHelp, NavIconLogout } from '../../assets/icons/NavIcons'
 import { MenuIcon, SearchIcon, MailIcon, NotificationIcon, GaugeIcon } from '../../assets/icons/ProfileIcons'
+import MetricCard from '../../components/shared/MetricCard'
 
 
 const pageMotion = {
@@ -155,14 +156,14 @@ export default function ProfilePage() {
               { label: 'Active listings', value: '12', hint: 'Visible on marketplace', highlight: false },
               { label: 'Pending', value: '2', hint: 'Drafts & reviews', highlight: false },
             ].map((m) => (
-              <motion.div key={m.label} className={`profile-metric ${m.highlight ? 'profile-metric--accent' : ''}`} variants={fadeUp}>
-                <div className="profile-metric-top">
-                  <span className="profile-metric-label">{m.label}</span>
-                  <span className="profile-metric-arrow" aria-hidden>↗</span>
-                </div>
-                <div className="profile-metric-value">{m.value}</div>
-                <div className="profile-metric-hint">{m.hint}</div>
-              </motion.div>
+              <MetricCard
+                key={m.label}
+                label={m.label}
+                value={m.value}
+                hint={m.hint}
+                highlight={m.highlight}
+                variants={fadeUp}
+              />
             ))}
           </motion.section>
 

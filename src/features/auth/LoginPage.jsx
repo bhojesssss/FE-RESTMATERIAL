@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from './auth'
+import FormInput from '../../components/common/FormInput'
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -51,31 +52,29 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={onSubmit} className="auth-form">
-            <label className="auth-label">
-              Email
-              <input
-                className="auth-input"
-                type="email"
-                autoComplete="email"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </label>
+            <FormInput
+              label="Email"
+              wrapperClass="auth-label"
+              inputClass="auth-input"
+              type="email"
+              autoComplete="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
 
-            <label className="auth-label">
-              Password
-              <input
-                className="auth-input"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </label>
+            <FormInput
+              label="Password"
+              wrapperClass="auth-label"
+              inputClass="auth-input"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
 
             {error ? <div className="auth-error" role="alert">{error}</div> : null}
 
