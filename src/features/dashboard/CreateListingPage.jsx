@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
+import { UploadIcon, SuccessCheckIcon } from '../../assets/icons/CreateListingIcons'
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -124,13 +125,7 @@ function PhotoUploader({ photos, onChange }) {
           style={{ display: 'none' }}
           onChange={onInputChange}
         />
-        <div className="photo-dropzone-icon" aria-hidden="true">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="3" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <polyline points="21 15 16 10 5 21" />
-          </svg>
-        </div>
+        <UploadIcon className="photo-dropzone-icon" aria-hidden="true" />
         <p className="photo-dropzone-text">Drag photos here to upload</p>
         <p className="photo-dropzone-or">— or —</p>
         <button
@@ -269,7 +264,7 @@ export default function CreateListingPage() {
       <motion.main className="create-shell" {...pageMotion}>
         <div className="create-inner">
           <div className="create-success">
-            <div className="create-success-icon" aria-hidden="true">✓</div>
+            <SuccessCheckIcon className="create-success-icon" aria-hidden="true" />
             <h2 className="create-success-title">Listing submitted!</h2>
             <p className="create-success-sub">
               Saved to local storage (demo mode). Once the backend is connected, it will appear on the marketplace automatically.

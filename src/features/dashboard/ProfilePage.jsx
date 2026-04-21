@@ -3,6 +3,9 @@ import { motion } from 'framer-motion'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { getSession, logout } from '../auth/auth'
 import { weekBars, recentListings, activityRows } from '../../data/profileData'
+import { NavIconDashboard, NavIconMarket, NavIconPlus, NavIconChart, NavIconUsers, NavIconSettings, NavIconHelp, NavIconLogout } from '../../assets/icons/NavIcons'
+import { MenuIcon, SearchIcon, MailIcon, NotificationIcon, GaugeIcon } from '../../assets/icons/ProfileIcons'
+
 
 const pageMotion = {
   initial: { opacity: 0 },
@@ -20,73 +23,6 @@ const fadeUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 }
 
-function NavIconDashboard() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="3" y="3" width="7" height="9" rx="1" />
-      <rect x="14" y="3" width="7" height="5" rx="1" />
-      <rect x="14" y="12" width="7" height="9" rx="1" />
-      <rect x="3" y="16" width="7" height="5" rx="1" />
-    </svg>
-  )
-}
-
-function NavIconMarket() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
-      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-    </svg>
-  )
-}
-
-function NavIconPlus() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  )
-}
-
-function NavIconChart() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
-    </svg>
-  )
-}
-
-function NavIconUsers() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  )
-}
-
-function NavIconSettings() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="12" cy="12" r="3" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-    </svg>
-  )
-}
-
-function NavIconHelp() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  )
-}
-
-function NavIconLogout() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-  )
-}
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -122,7 +58,7 @@ export default function ProfilePage() {
         aria-label="Open menu"
         onClick={() => setSidebarOpen(true)}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
+        <MenuIcon />
       </button>
 
       <aside className={`profile-sidebar ${sidebarOpen ? 'profile-sidebar--open' : ''}`}>
@@ -178,16 +114,16 @@ export default function ProfilePage() {
       <div className="profile-workspace">
         <header className="profile-topbar">
           <div className="profile-search-wrap">
-            <svg className="profile-search-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <SearchIcon className="profile-search-ico" />
             <input type="search" className="profile-search" placeholder="Search listings, cities, materials…" aria-label="Search" />
             <span className="profile-search-kbd">⌘ F</span>
           </div>
           <div className="profile-topbar-actions">
             <button type="button" className="profile-icon-btn" aria-label="Messages">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
+              <MailIcon />
             </button>
             <button type="button" className="profile-icon-btn" aria-label="Notifications">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+              <NotificationIcon />
             </button>
             <div className="profile-top-user">
               <div className="profile-top-avatar" aria-hidden>{initials}</div>
@@ -299,26 +235,7 @@ export default function ProfilePage() {
                 <h2 className="profile-widget-title">Listing progress</h2>
               </div>
               <div className="profile-gauge-wrap">
-                <svg className="profile-gauge-svg" viewBox="0 0 200 110" aria-label="41 percent listings fulfilled">
-                  <path
-                    d="M 30 100 A 70 70 0 0 1 170 100"
-                    fill="none"
-                    stroke="rgba(0,53,102,0.12)"
-                    strokeWidth="16"
-                    strokeLinecap="round"
-                    pathLength="100"
-                  />
-                  <path
-                    d="M 30 100 A 70 70 0 0 1 170 100"
-                    fill="none"
-                    stroke="var(--bus-yellow)"
-                    strokeWidth="16"
-                    strokeLinecap="round"
-                    pathLength="100"
-                    strokeDasharray="100"
-                    strokeDashoffset={59}
-                  />
-                </svg>
+                <GaugeIcon className="profile-gauge-svg" />
                 <div className="profile-gauge-label">41% listings fulfilled</div>
               </div>
               <div className="profile-gauge-legend">
