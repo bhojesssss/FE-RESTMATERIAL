@@ -320,3 +320,21 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.co2-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  width: fit-content;
+}
+.co2-badge svg {
+  color: #059669;
+}

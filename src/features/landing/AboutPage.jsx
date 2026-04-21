@@ -47,6 +47,12 @@ export default function AboutPage() {
               to let good materials go to waste — one listing, one handshake, one reuse at a time.
             </p>
           </section>
+          <section className="about-block">
+            <h2>Our Methodology</h2>
+            <p>
+              Kalkulasi penghematan CO2 kami didasarkan pada berat material yang di-reuse dikalikan dengan faktor emisi produksi material baru. Sumber data faktor emisi merujuk pada ICE Database v3.0 (University of Bath) dan CIDB Malaysia Embodied Carbon Inventory.
+            </p>
+          </section>
         </div>
       </div>
     </motion.main>

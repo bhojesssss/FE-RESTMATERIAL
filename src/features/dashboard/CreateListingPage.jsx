@@ -12,11 +12,14 @@ const pageMotion = {
 
 // Emission factors (kg CO2 saved per kg material reused)
 // Source: ICE Database v3.0, University of Bath / CIDB Malaysia Embodied Carbon Inventory
-const CO2_EMISSION_FACTORS = {
+export const CO2_EMISSION_FACTORS = {
   'Bricks & Blocks': 0.24,
   'Steel & Iron': 1.46,
   'Wood & Plywood': 0.46,
   'Ceramic & Granite': 0.78,
+  'Aluminium': 8.24,
+  'Glass': 0.91,
+  'Concrete': 0.13,
   'Frames & Doors': 0.46,
   'Pipes & Installation': 2.50,
 }

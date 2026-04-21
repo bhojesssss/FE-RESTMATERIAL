@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { PlaceholderImageIcon } from '../../assets/icons/MarketplaceIcons'
+import Co2Badge from './Co2Badge'
 
 function formatIdr(n) {
   try {
@@ -31,12 +32,13 @@ export default function ListingCard({ listing, variants }) {
           {listing.city} • {listing.volume?.value} {listing.volume?.unit}
         </div>
 
-        <div className="card-row">
+        <div className="card-row" style={{ alignItems: 'center' }}>
           <span className={`cond-pill ${listing.condition.startsWith('New') ? 'cond-new' : listing.condition.startsWith('Pre-loved') ? 'cond-pre' : 'cond-repair'}`}>
             {listing.condition.startsWith('New') ? 'New' : listing.condition.startsWith('Pre-loved') ? 'Pre-loved' : 'Needs Repair'}
           </span>
-          <div className="card-price">{formatIdr(listing.priceIdr)}</div>
+          {listing.co2SavedKg && <Co2Badge co2Value={listing.co2SavedKg} />}
         </div>
+        <div className="card-price" style={{ marginTop: '0.8rem', marginBottom: '0.5rem' }}>{formatIdr(listing.priceIdr)}</div>
 
         <Link className="card-cta" to={`/marketplace/${listing.id}`}>View Details</Link>
       </div>
