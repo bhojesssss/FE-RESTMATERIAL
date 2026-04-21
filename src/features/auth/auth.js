@@ -58,7 +58,33 @@ export function login({ email, password }) {
     throw err
   }
 
-  const session = { userId: user.id, email: user.email, name: user.name, loggedInAt: new Date().toISOString() }
+  const session = { userId: user.id, email: user.email, name: user.name, city: user.city, phone: user.phone, loggedInAt: new Date().toISOString() }
   localStorage.setItem(SESSION_KEY, JSON.stringify(session))
   return session
 }
+
+export function updateUser(userId, data) {
+  const users = getUsers()
+  const userIndex = users.findIndex((u) => u.id === userId)
+  if (userIndex === -1) throw new Error('User not found')
+
+  const user = users[userIndex]
+  const updatedUser = {
+    ...user,
+    name: data.name !== undefined ? String(data.name).trim() : user.name,
+    city: data.city !== undefined ? String(data.city).trim() : user.city,
+    phone: data.phone !== undefined ? String(data.phone).trim() : user.phone,
+  }
+
+  users[userIndex] = updatedUser
+  localStorage.setItem(USERS_KEY, JSON.stringify(users))
+
+  const session = getSession()
+  if (session && session.userId === userId) {
+    const nextSession = { ...session, name: updatedUser.name, city: updatedUser.city, phone: updatedUser.phone }
+    localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession))
+    return nextSession
+  }
+  return null
+}
+

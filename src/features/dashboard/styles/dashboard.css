@@ -121,35 +121,54 @@
   margin-top: auto;
   border-radius: 14px;
   background: linear-gradient(160deg, var(--prussian), var(--oxford));
-  padding: 1rem;
+  padding: 1.25rem 1.1rem;
   color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 29, 61, 0.12);
 }
 .profile-promo-title {
-  font-weight: 900;
-  font-size: 0.88rem;
-  margin: 0 0 0.35rem;
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
 }
 .profile-promo-text {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.6);
-  line-height: 1.55;
-  margin: 0 0 0.9rem;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--bus-yellow);
+  line-height: 1;
+  margin: 0.2rem 0;
+  letter-spacing: -0.02em;
+}
+.profile-promo-sub {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 0.8rem;
 }
 .profile-promo-btn {
   display: inline-flex;
-  padding: 0.5rem 0.9rem;
+  padding: 0.5rem 0.8rem;
   border-radius: 8px;
-  background: rgba(255, 195, 0, 0.9);
-  color: var(--ink-black);
-  font-weight: 900;
-  font-size: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--white);
+  font-weight: 800;
+  font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-decoration: none;
-  transition: background 0.2s ease;
+  background: transparent;
+  align-self: flex-start;
+  transition: all 0.2s ease;
 }
 .profile-promo-btn:hover {
-  background: var(--gold);
+  border-color: var(--bus-yellow);
+  color: var(--bus-yellow);
+  background: rgba(255, 195, 0, 0.08);
 }
 .profile-workspace {
   flex: 1;

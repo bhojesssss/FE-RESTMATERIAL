@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { getSession, logout } from '../auth/auth'
-import { weekBars, recentListings, activityRows } from '../../data/profileData'
+import { getSession, logout, updateUser } from '../auth/auth'
+import { recentListings } from '../../data/profileData'
+import { CITIES, LISTINGS } from '../../data/marketplace'
 import { NavIconDashboard, NavIconMarket, NavIconPlus, NavIconChart, NavIconUsers, NavIconSettings, NavIconHelp, NavIconLogout } from '../../assets/icons/NavIcons'
 import { MenuIcon, SearchIcon, MailIcon, NotificationIcon, GaugeIcon } from '../../assets/icons/ProfileIcons'
 import MetricCard from '../../components/shared/MetricCard'
@@ -29,11 +30,31 @@ export default function ProfilePage() {
   const navigate = useNavigate()
   const [session, setSession] = useState(() => getSession())
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState(() => ({
+    name: session?.name || '',
+    city: session?.city || '',
+    phone: session?.phone || ''
+  }))
   void motion
 
   useEffect(() => {
     if (!session) navigate('/login', { replace: true })
   }, [navigate, session])
+
+  const totalUserListings = useMemo(() => {
+    if (!session) return 0
+    let count = LISTINGS.filter(l => l.seller?.id === session.userId).length
+    try {
+      const draft = localStorage.getItem('rm_listings_draft')
+      if (draft) {
+        const parsed = JSON.parse(draft)
+        if (Array.isArray(parsed)) count += parsed.length
+        else count += 1
+      }
+    } catch { }
+    return count
+  }, [session])
 
   const displayName = useMemo(() => session?.name || 'User', [session])
   const initials = useMemo(() => {
@@ -47,6 +68,17 @@ export default function ProfilePage() {
     logout()
     setSession(null)
     navigate('/', { replace: true })
+  }
+
+  function handleSaveProfile(e) {
+    e.preventDefault()
+    try {
+      const nextSession = updateUser(session.userId, editForm)
+      if (nextSession) setSession(nextSession)
+      setIsEditing(false)
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   if (!session) return null
@@ -98,9 +130,10 @@ export default function ProfilePage() {
         </nav>
 
         <div className="profile-promo">
-          <div className="profile-promo-title">List on the go</div>
-          <p className="profile-promo-text">Capture surplus materials from the yard — RESTMATERIAL web works on mobile.</p>
-          <Link to="/create-listing" className="profile-promo-btn" onClick={() => setSidebarOpen(false)}>New listing</Link>
+          <div className="profile-promo-title">Your Listings</div>
+          <div className="profile-promo-text">{totalUserListings}</div>
+          <p className="profile-promo-sub">Materials currently listed</p>
+          <Link to="/profile" className="profile-promo-btn" onClick={() => setSidebarOpen(false)}>Manage Listings</Link>
         </div>
       </aside>
 
@@ -167,31 +200,7 @@ export default function ProfilePage() {
             ))}
           </motion.section>
 
-          <motion.div className="profile-grid-row" variants={stagger} initial="hidden" animate="show">
-            <motion.section className="profile-widget" variants={fadeUp}>
-              <div className="profile-widget-head">
-                <h2 className="profile-widget-title">Listing activity</h2>
-                <span className="profile-widget-tag">This week</span>
-              </div>
-              <div className="profile-chart">
-                {weekBars.map((b, i) => (
-                  <div key={i} className="profile-chart-col">
-                    <div className={`profile-bar ${b.style}`} style={{ height: `${b.h}%` }} />
-                    <span className="profile-chart-day">{['S', 'M', 'T', 'W', 'T', 'F', 'S'][i]}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.section>
-
-            <motion.section className="profile-widget profile-widget--accent-soft" variants={fadeUp}>
-              <div className="profile-widget-head">
-                <h2 className="profile-widget-title">Reminders</h2>
-              </div>
-              <p className="profile-remind-title">Complete seller profile</p>
-              <p className="profile-remind-desc">Add company name and preferred pickup windows to improve trust.</p>
-              <Link to="/profile" className="profile-remind-cta">Update profile</Link>
-            </motion.section>
-
+          <motion.div className="profile-grid-row profile-grid-row--2" variants={stagger} initial="hidden" animate="show">
             <motion.section className="profile-widget" variants={fadeUp}>
               <div className="profile-widget-head">
                 <h2 className="profile-widget-title">Recent listings</h2>
@@ -205,27 +214,6 @@ export default function ProfilePage() {
                       <div className="profile-mini-title">{item.title}</div>
                       <div className="profile-mini-meta">{item.meta}</div>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </motion.section>
-          </motion.div>
-
-          <motion.div className="profile-grid-row profile-grid-row--2" variants={stagger} initial="hidden" animate="show">
-            <motion.section className="profile-widget" variants={fadeUp}>
-              <div className="profile-widget-head">
-                <h2 className="profile-widget-title">Your activity</h2>
-                <button type="button" className="profile-widget-link">+ Add note</button>
-              </div>
-              <ul className="profile-activity">
-                {activityRows.map((row) => (
-                  <li key={row.task} className="profile-activity-row">
-                    <div className="profile-activity-avatar" aria-hidden>{row.name === 'You' ? initials : 'S'}</div>
-                    <div className="profile-activity-main">
-                      <div className="profile-activity-name">{row.name}</div>
-                      <div className="profile-activity-task">{row.task}</div>
-                    </div>
-                    <span className={`status-pill ${row.statusClass}`}>{row.status}</span>
                   </li>
                 ))}
               </ul>
@@ -257,11 +245,48 @@ export default function ProfilePage() {
           </motion.div>
 
           <motion.section className="profile-account-card" variants={fadeUp} initial="hidden" animate="show">
-            <h2 className="profile-widget-title">Account</h2>
-            <div className="profile-account-grid">
-              <div><span className="profile-account-k">Name</span><div className="profile-account-v">{session.name}</div></div>
-              <div><span className="profile-account-k">Email</span><div className="profile-account-v">{session.email}</div></div>
+            <div className="profile-widget-head" style={{ marginBottom: '1rem' }}>
+              <h2 className="profile-widget-title">Account</h2>
+              {!isEditing && (
+                <button type="button" className="profile-widget-link" onClick={() => setIsEditing(true)}>Edit Profile</button>
+              )}
             </div>
+
+            {isEditing ? (
+              <form onSubmit={handleSaveProfile} className="profile-account-form">
+                <div className="profile-account-grid" style={{ marginBottom: '1rem' }}>
+                  <label className="create-label" style={{ gridColumn: '1 / -1' }}>
+                    Full Name
+                    <input className="create-input" value={editForm.name} onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))} required />
+                  </label>
+                  <label className="create-label">
+                    City
+                    <select className="create-input" value={editForm.city} onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))} required>
+                      <option value="" disabled>Select city</option>
+                      {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </label>
+                  <label className="create-label">
+                    WhatsApp Number
+                    <input className="create-input" value={editForm.phone} onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))} required />
+                  </label>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="submit" className="profile-btn profile-btn--primary">Save Changes</button>
+                  <button type="button" className="profile-btn profile-btn--ghost" onClick={() => {
+                    setEditForm({ name: session.name || '', city: session.city || '', phone: session.phone || '' })
+                    setIsEditing(false)
+                  }}>Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <div className="profile-account-grid">
+                <div><span className="profile-account-k">Name</span><div className="profile-account-v">{session.name}</div></div>
+                <div><span className="profile-account-k">Email</span><div className="profile-account-v">{session.email}</div></div>
+                <div><span className="profile-account-k">City</span><div className="profile-account-v">{session.city || '-'}</div></div>
+                <div><span className="profile-account-k">WhatsApp</span><div className="profile-account-v">{session.phone || '-'}</div></div>
+              </div>
+            )}
           </motion.section>
         </div>
       </div>
