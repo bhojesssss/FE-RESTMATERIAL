@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { getImpactStats } from './ImpactLogic'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 36 },
@@ -13,6 +14,12 @@ const fadeUp = {
 
 export default function Hero() {
   const bgRef = useRef(null)
+  const [stats, setStats] = useState({ activeListings: 2400, divertedKg: 12450, co2Kg: 8200, users: 1120 })
+
+  useEffect(() => {
+    setStats(getImpactStats())
+  }, [])
+
   void motion
 
   // Subtle parallax on scroll
@@ -100,9 +107,10 @@ export default function Hero() {
           variants={fadeUp} initial="hidden" animate="show" custom={4}
         >
           {[
-            { num: '2,400+', label: 'Active Listings' },
-            { num: '340+', label: 'Cities Covered' },
-            { num: '100%', label: 'Free to Use' },
+            { num: `${stats.divertedKg.toLocaleString()} kg`, label: 'Total Material Diverted' },
+            { num: `${stats.co2Kg.toLocaleString()} kg`, label: 'CO2 Saved' },
+            { num: `${stats.activeListings.toLocaleString()}+`, label: 'Active Listings' },
+            { num: `${stats.users.toLocaleString()}+`, label: 'Registered Users' },
           ].map(({ num, label }) => (
             <div key={label} style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--bus-yellow)', lineHeight: 1 }}>{num}</div>
