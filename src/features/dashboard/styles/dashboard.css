@@ -121,35 +121,54 @@
   margin-top: auto;
   border-radius: 14px;
   background: linear-gradient(160deg, var(--prussian), var(--oxford));
-  padding: 1rem;
+  padding: 1.25rem 1.1rem;
   color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 29, 61, 0.12);
 }
 .profile-promo-title {
-  font-weight: 900;
-  font-size: 0.88rem;
-  margin: 0 0 0.35rem;
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
 }
 .profile-promo-text {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.6);
-  line-height: 1.55;
-  margin: 0 0 0.9rem;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--bus-yellow);
+  line-height: 1;
+  margin: 0.2rem 0;
+  letter-spacing: -0.02em;
+}
+.profile-promo-sub {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 0.8rem;
 }
 .profile-promo-btn {
   display: inline-flex;
-  padding: 0.5rem 0.9rem;
+  padding: 0.5rem 0.8rem;
   border-radius: 8px;
-  background: rgba(255, 195, 0, 0.9);
-  color: var(--ink-black);
-  font-weight: 900;
-  font-size: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--white);
+  font-weight: 800;
+  font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-decoration: none;
-  transition: background 0.2s ease;
+  background: transparent;
+  align-self: flex-start;
+  transition: all 0.2s ease;
 }
 .profile-promo-btn:hover {
-  background: var(--gold);
+  border-color: var(--bus-yellow);
+  color: var(--bus-yellow);
+  background: rgba(255, 195, 0, 0.08);
 }
 .profile-workspace {
   flex: 1;
@@ -558,51 +577,75 @@
   background: rgba(245, 158, 11, 0.16);
   color: #b45309;
 }
-.profile-widget--gauge .profile-gauge-wrap {
-  text-align: center;
-  padding: 0.5rem 0;
-}
-.profile-gauge-svg {
-  width: min(220px, 100%);
-  height: auto;
-  display: block;
-  margin: 0 auto;
-}
-.profile-gauge-label {
-  margin-top: 0.35rem;
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: var(--ink-black);
-}
-.profile-gauge-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1rem;
-  justify-content: center;
+.pipeline-wrap {
   margin-top: 1rem;
+}
+.pipeline-track {
+  display: flex;
+  height: 24px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 53, 102, 0.05);
+  gap: 2px;
+  box-shadow: inset 0 2px 4px rgba(0, 29, 61, 0.05);
+}
+.pipeline-segment {
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  min-width: 0;
+  position: relative;
+}
+.pipeline-segment:hover {
+  opacity: 0.85;
+}
+.pipeline-segment--draft {
+  background: repeating-linear-gradient(-45deg, rgba(0, 53, 102, 0.35), rgba(0, 53, 102, 0.35) 4px, rgba(0, 53, 102, 0.12) 4px, rgba(0, 53, 102, 0.12) 8px);
+}
+.pipeline-segment--active {
+  background: rgba(0, 53, 102, 0.4);
+}
+.pipeline-segment--sold {
+  background: linear-gradient(180deg, var(--oxford), var(--prussian));
+}
+.pipeline-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.25rem;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   color: rgba(0, 29, 61, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  gap: 0.5rem;
 }
-.profile-gauge-legend span {
-  display: inline-flex;
+.pipeline-stats-item {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
+  flex: 1;
 }
-.lg {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  display: inline-block;
+.pipeline-stats-item span:first-of-type {
+  margin-top: 0.25rem;
 }
-.lg--solid {
+.pipeline-stats-val {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--ink-black);
+  letter-spacing: -0.02em;
+}
+.pipeline-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+}
+.pipeline-legend-dot--draft {
+  background: repeating-linear-gradient(-45deg, rgba(0, 53, 102, 0.35), rgba(0, 53, 102, 0.35) 3px, rgba(0, 53, 102, 0.12) 3px, rgba(0, 53, 102, 0.12) 6px);
+}
+.pipeline-legend-dot--active {
+  background: rgba(0, 53, 102, 0.4);
+}
+.pipeline-legend-dot--sold {
   background: var(--oxford);
-}
-.lg--mid {
-  background: rgba(0, 53, 102, 0.35);
-}
-.lg--stripe {
-  background: repeating-linear-gradient(-45deg, rgba(0, 53, 102, 0.45), rgba(0, 53, 102, 0.45) 2px, rgba(0, 53, 102, 0.12) 2px, rgba(0, 53, 102, 0.12) 4px);
 }
 .profile-widget--dark {
   background: linear-gradient(160deg, var(--prussian) 0%, #001028 55%, var(--ink-black) 100%);
