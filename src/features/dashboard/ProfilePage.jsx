@@ -7,6 +7,7 @@ import { CITIES, LISTINGS } from '../../data/marketplace'
 import { NavIconDashboard, NavIconMarket, NavIconPlus, NavIconChart, NavIconUsers, NavIconSettings, NavIconHelp, NavIconLogout } from '../../assets/icons/NavIcons'
 import { MenuIcon, SearchIcon, MailIcon, NotificationIcon } from '../../assets/icons/ProfileIcons'
 import MetricCard from '../../components/shared/MetricCard'
+import { CO2_EMISSION_FACTORS } from './CreateListingPage'
 
 
 const pageMotion = {
@@ -60,7 +61,10 @@ export default function ProfilePage() {
     const soldItems = myLists.filter(l => l.status?.startsWith('Sold'))
     const sold = soldItems.length
 
-    const co2 = soldItems.reduce((acc, curr) => acc + (curr.volume?.value || 0) * 1.2, 0)
+    const co2 = soldItems.reduce((acc, curr) => {
+      const factor = CO2_EMISSION_FACTORS[curr.category] || 0.5
+      return acc + (curr.volume?.value || 0) * factor
+    }, 0)
     
     return { drafts, active, sold, co2: Math.round(co2) }
   }, [session])

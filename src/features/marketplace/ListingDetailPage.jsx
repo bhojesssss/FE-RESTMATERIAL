@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { LISTINGS } from '../../data/marketplace'
 import { PlaceholderImageIconLarge } from '../../assets/icons/MarketplaceIcons'
+import Co2Badge from '../../components/shared/Co2Badge'
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -18,13 +19,6 @@ function formatIdr(n) {
   }
 }
 
-function estimateCo2Kg(listing) {
-  const v = Number(listing?.volume?.value || 0)
-  const unit = listing?.volume?.unit
-  const baseKg = unit === 'kg' ? v : unit === 'pcs' ? v * 1.6 : unit === 'boxes' ? v * 18 : v * 12
-  const factor = listing?.category?.includes('Steel') ? 1.9 : listing?.category?.includes('Wood') ? 0.9 : 1.2
-  return Math.max(6, Math.round(baseKg * factor * 0.35))
-}
 
 export default function ListingDetailPage() {
   void motion
@@ -53,7 +47,6 @@ export default function ListingDetailPage() {
     )
   }
 
-  const co2 = estimateCo2Kg(listing)
 
   return (
     <motion.main className="market-shell" {...pageMotion}>
@@ -109,11 +102,16 @@ export default function ListingDetailPage() {
               <p>{listing.description}</p>
             </div>
 
-            <div className="carbon-card">
-              <div className="carbon-kicker">Carbon Saving Estimate</div>
-              <div className="carbon-text">This transaction potentially prevents <strong>~{co2} kg of CO2e</strong></div>
-              <div className="carbon-sub">Estimation based on category and volume.</div>
-            </div>
+            {listing.co2SavedKg ? (
+              <div className="carbon-card">
+                <div className="carbon-kicker">Carbon Saving Estimate</div>
+                <div className="carbon-text" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '0.2rem' }}>
+                  <Co2Badge co2Value={listing.co2SavedKg} className="co2-badge--large" />
+                  <span>This transaction prevents CO2e emissions</span>
+                </div>
+                <div className="carbon-sub">Estimation based on standardized ICE Database factors.</div>
+              </div>
+            ) : null}
 
             <div className="detail-section">
               <div className="detail-section-title">Other materials from this seller</div>
