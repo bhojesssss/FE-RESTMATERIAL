@@ -5,7 +5,7 @@ import { getSession, logout, updateUser } from '../auth/auth'
 import { recentListings } from '../../data/profileData'
 import { CITIES, LISTINGS } from '../../data/marketplace'
 import { NavIconDashboard, NavIconMarket, NavIconPlus, NavIconChart, NavIconUsers, NavIconSettings, NavIconHelp, NavIconLogout } from '../../assets/icons/NavIcons'
-import { MenuIcon, SearchIcon, MailIcon, NotificationIcon, GaugeIcon } from '../../assets/icons/ProfileIcons'
+import { MenuIcon, SearchIcon, MailIcon, NotificationIcon } from '../../assets/icons/ProfileIcons'
 import MetricCard from '../../components/shared/MetricCard'
 
 
@@ -42,19 +42,30 @@ export default function ProfilePage() {
     if (!session) navigate('/login', { replace: true })
   }, [navigate, session])
 
-  const totalUserListings = useMemo(() => {
-    if (!session) return 0
-    let count = LISTINGS.filter(l => l.seller?.id === session.userId).length
+  const pipelineStats = useMemo(() => {
+    if (!session) return { drafts: 0, active: 0, sold: 0, co2: 0 }
+    
+    let drafts = 0
     try {
       const draft = localStorage.getItem('rm_listings_draft')
       if (draft) {
         const parsed = JSON.parse(draft)
-        if (Array.isArray(parsed)) count += parsed.length
-        else count += 1
+        if (Array.isArray(parsed)) drafts = parsed.length
+        else drafts = 1
       }
-    } catch { }
-    return count
+    } catch {}
+
+    const myLists = LISTINGS.filter(l => l.seller?.id === session.userId)
+    const active = myLists.filter(l => l.status === 'Available').length
+    const soldItems = myLists.filter(l => l.status?.startsWith('Sold'))
+    const sold = soldItems.length
+
+    const co2 = soldItems.reduce((acc, curr) => acc + (curr.volume?.value || 0) * 1.2, 0)
+    
+    return { drafts, active, sold, co2: Math.round(co2) }
   }, [session])
+
+  const totalUserListings = pipelineStats.drafts + pipelineStats.active + pipelineStats.sold
 
   const displayName = useMemo(() => session?.name || 'User', [session])
   const initials = useMemo(() => {
@@ -219,25 +230,51 @@ export default function ProfilePage() {
               </ul>
             </motion.section>
 
-            <motion.section className="profile-widget profile-widget--gauge" variants={fadeUp}>
+            <motion.section className="profile-widget" variants={fadeUp}>
               <div className="profile-widget-head">
                 <h2 className="profile-widget-title">Listing progress</h2>
               </div>
-              <div className="profile-gauge-wrap">
-                <GaugeIcon className="profile-gauge-svg" />
-                <div className="profile-gauge-label">41% listings fulfilled</div>
-              </div>
-              <div className="profile-gauge-legend">
-                <span><i className="lg lg--solid" /> Completed</span>
-                <span><i className="lg lg--mid" /> Active</span>
-                <span><i className="lg lg--stripe" /> Pending</span>
+              <div className="pipeline-wrap">
+                <div className="pipeline-track">
+                  {(pipelineStats.drafts > 0 || pipelineStats.active > 0 || pipelineStats.sold > 0) ? (
+                    <>
+                      {pipelineStats.drafts > 0 && <div className="pipeline-segment pipeline-segment--draft" title="Draft" style={{ flex: pipelineStats.drafts }} />}
+                      {pipelineStats.active > 0 && <div className="pipeline-segment pipeline-segment--active" title="Active" style={{ flex: pipelineStats.active }} />}
+                      {pipelineStats.sold > 0 && <div className="pipeline-segment pipeline-segment--sold" title="Sold" style={{ flex: pipelineStats.sold }} />}
+                    </>
+                  ) : (
+                    <div className="pipeline-segment" style={{ flex: 1, background: 'rgba(0, 53, 102, 0.05)' }} />
+                  )}
+                </div>
+                
+                <div className="pipeline-labels">
+                  <div className="pipeline-stats-item">
+                    <div className="pipeline-legend-dot pipeline-legend-dot--draft" />
+                    <span>Draft</span>
+                    <span className="pipeline-stats-val">{pipelineStats.drafts}</span>
+                  </div>
+                  <div className="pipeline-stats-item">
+                    <div className="pipeline-legend-dot pipeline-legend-dot--active" />
+                    <span>Active</span>
+                    <span className="pipeline-stats-val">{pipelineStats.active}</span>
+                  </div>
+                  <div className="pipeline-stats-item">
+                    <div className="pipeline-legend-dot pipeline-legend-dot--sold" />
+                    <span>Sold</span>
+                    <span className="pipeline-stats-val">{pipelineStats.sold}</span>
+                  </div>
+                </div>
               </div>
             </motion.section>
 
             <motion.section className="profile-widget profile-widget--dark" variants={fadeUp}>
-              <div className="profile-impact-label">CO₂ impact (demo)</div>
-              <div className="profile-impact-value">128 kg</div>
-              <p className="profile-impact-sub">Estimated emissions avoided this month through reuse on RESTMATERIAL.</p>
+              <div className="profile-impact-label">CO₂ impact</div>
+              <div className="profile-impact-value">{pipelineStats.co2} kg</div>
+              <p className="profile-impact-sub">
+                {pipelineStats.co2 > 0 
+                  ? "Estimated emissions avoided this month through reuse on RESTMATERIAL." 
+                  : "Start selling your surplus materials to build your CO₂ impact!"}
+              </p>
               <div className="profile-impact-actions">
                 <Link to="/marketplace" className="profile-impact-btn">View marketplace</Link>
               </div>
