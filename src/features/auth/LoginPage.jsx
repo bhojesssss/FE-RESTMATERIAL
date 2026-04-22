@@ -27,7 +27,7 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      login({ email, password })
+      await login({ email, password })
       navigate('/profile')
     } catch (err) {
       setError(err?.message || 'Login failed')

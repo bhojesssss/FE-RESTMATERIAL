@@ -29,7 +29,7 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
     try {
-      register({ name, email, password })
+      await register({ name, email, password })
       navigate('/profile')
     } catch (err) {
       setError(err?.message || 'Registration failed')

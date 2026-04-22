@@ -6,7 +6,7 @@ export default function ImpactSection() {
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
-    setStats(getImpactStats())
+    getImpactStats().then(setStats).catch(() => {})
   }, [])
 
   if (!stats) return null

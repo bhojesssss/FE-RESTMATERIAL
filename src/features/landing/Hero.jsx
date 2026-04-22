@@ -17,7 +17,7 @@ export default function Hero() {
   const [stats, setStats] = useState({ activeListings: 2400, divertedKg: 12450, co2Kg: 8200, users: 1120 })
 
   useEffect(() => {
-    setStats(getImpactStats())
+    getImpactStats().then(setStats).catch(() => {})
   }, [])
 
   void motion

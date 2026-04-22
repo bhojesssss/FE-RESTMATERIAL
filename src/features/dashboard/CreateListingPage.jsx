@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { UploadIcon, SuccessCheckIcon } from '../../assets/icons/CreateListingIcons'
 import FormInput from '../../components/common/FormInput'
+import { createListing } from '../../api/listings.api'
+import { getSession } from '../auth/auth'
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -190,6 +192,8 @@ export default function CreateListingPage() {
   const [form, setForm] = useState(INITIAL_FORM)
   const [submitted, setSubmitted] = useState(false)
   const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const co2Preview = useMemo(() => {
     const weight = parseFloat(form.weightKg)
@@ -228,7 +232,7 @@ export default function CreateListingPage() {
     return next
   }
 
-  function onSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault()
     const validationErrors = validate()
     if (Object.keys(validationErrors).length > 0) {
@@ -238,8 +242,8 @@ export default function CreateListingPage() {
       return
     }
 
+    const session = getSession()
     const listing = {
-      id: `listing-${Date.now()}`,
       category: form.category,
       name: form.title.trim(),
       city: form.city,
@@ -247,19 +251,21 @@ export default function CreateListingPage() {
       condition: form.condition,
       status: 'Available',
       priceIdr: form.isFree ? 0 : parseInt(form.priceIdr, 10),
-      uploadedAt: new Date().toISOString().slice(0, 10),
       description: form.description.trim(),
       co2SavedKg: co2Preview,
-      seller: null,
-      images: [],
+      sellerId: session?.userId || null,
     }
 
-    // Persist ke localStorage supaya listing baru muncul di marketplace
-    const existing = JSON.parse(localStorage.getItem('rm_listings_draft') || '[]')
-    localStorage.setItem('rm_listings_draft', JSON.stringify([listing, ...existing]))
-
-    console.log('[CreateListing] Submitted listing (demo):', listing)
-    setSubmitted(true)
+    setSubmitting(true)
+    setSubmitError('')
+    try {
+      await createListing(listing)
+      setSubmitted(true)
+    } catch (err) {
+      setSubmitError(err.message || 'Failed to submit listing. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   // ── Success state ──
@@ -494,9 +500,10 @@ export default function CreateListingPage() {
           </div>
 
           {/* FIX 4: Full-width stacked buttons */}
+          {submitError && <p className="field-error" role="alert">{submitError}</p>}
           <div className="create-actions-stack">
-            <button type="submit" className="auth-btn auth-btn-primary">
-              Submit listing
+            <button type="submit" className="auth-btn auth-btn-primary" disabled={submitting}>
+              {submitting ? 'Submitting…' : 'Submit listing'}
             </button>
             <button
               type="button"
