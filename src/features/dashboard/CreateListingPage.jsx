@@ -53,7 +53,6 @@ const INITIAL_FORM = {
   city: '',
   weightKg: '',
   priceIdr: '',
-  isFree: false,
   photos: [],
 }
 
@@ -203,8 +202,6 @@ export default function CreateListingPage() {
     setForm((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
-      // FIX 2: Kosongkan priceIdr saat isFree dicentang (bukan '0')
-      ...(name === 'isFree' && checked ? { priceIdr: '' } : {}),
     }))
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }))
   }
@@ -223,7 +220,7 @@ export default function CreateListingPage() {
     if (!form.condition) next.condition = 'Please select a condition'
     if (!form.city) next.city = 'Please select a city'
     if (!form.weightKg || parseFloat(form.weightKg) <= 0) next.weightKg = 'Enter estimated weight in kg'
-    if (!form.isFree && (!form.priceIdr || parseFloat(form.priceIdr) < 0)) next.priceIdr = 'Enter a price or mark as free'
+    if (!form.priceIdr || parseFloat(form.priceIdr) < 0) next.priceIdr = 'Enter a valid price'
     if (!form.description.trim()) next.description = 'Please add a short description'
     return next
   }
@@ -246,7 +243,7 @@ export default function CreateListingPage() {
       volume: { value: parseFloat(form.weightKg), unit: 'kg' },
       condition: form.condition,
       status: 'Available',
-      priceIdr: form.isFree ? 0 : parseInt(form.priceIdr, 10),
+      priceIdr: parseInt(form.priceIdr, 10),
       uploadedAt: new Date().toISOString().slice(0, 10),
       description: form.description.trim(),
       co2SavedKg: co2Preview,
@@ -442,41 +439,25 @@ export default function CreateListingPage() {
             )}
           </AnimatePresence>
 
-          {/* Price — FIX 2: hint hanya muncul kalau bukan free DAN nilai > 0 */}
+          {/* Price */}
           <div id="field-priceIdr">
-            {!form.isFree && (
-              <>
-                <FormInput
-                  label="Price (IDR) *"
-                  wrapperClass="create-label"
-                  inputClass="create-input"
-                  style={{ marginTop: '0.5rem' }}
-                  type="number"
-                  name="priceIdr"
-                  min="0"
-                  step="1000"
-                  placeholder="e.g. 500000"
-                  value={form.priceIdr}
-                  onChange={handleChange}
-                  disabled={form.isFree}
-                  error={errors.priceIdr}
-                />
-                {form.priceIdr && parseFloat(form.priceIdr) > 0 && (
-                  <p className="create-hint">{formatIdr(form.priceIdr)}</p>
-                )}
-              </>
-            )}
-
-            {/* FIX 2: Checkbox sejajar dengan teksnya pakai flexbox */}
-            <label className="create-checkbox-label">
-              <input
-                type="checkbox"
-                name="isFree"
-                checked={form.isFree}
-                onChange={handleChange}
-              />
-              <span>Free / donate this material</span>
-            </label>
+            <FormInput
+              label="Price (IDR) *"
+              wrapperClass="create-label"
+              inputClass="create-input"
+              style={{ marginTop: '0.5rem' }}
+              type="number"
+              name="priceIdr"
+              min="0"
+              step="1000"
+              placeholder="e.g. 500000"
+              value={form.priceIdr}
+              onChange={handleChange}
+              error={errors.priceIdr}
+            />
+            {/* {form.priceIdr && parseFloat(form.priceIdr) > 0 && (
+              <p className="create-hint">{formatIdr(form.priceIdr)}</p>
+            )} */}
 
             {errors.priceIdr && <p className="field-error">{errors.priceIdr}</p>}
           </div>
