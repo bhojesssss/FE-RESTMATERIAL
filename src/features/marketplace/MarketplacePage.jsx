@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useRef, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { CITIES, CONDITIONS, LISTINGS, MATERIAL_CATEGORIES } from '../../data/marketplace'
 import { EmptySearchIcon } from '../../assets/icons/MarketplaceIcons'
 import ListingCard from '../../components/shared/ListingCard'
-
+// here fetch api tp integrated backend
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
@@ -43,6 +43,11 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState('Newest')
   const [priceMin, setPriceMin] = useState(0)
   const [priceMax, setPriceMax] = useState(10_000_000)
+  const [citySearch, setCitySearch] = useState('')
+  const [sortOpen, setSortOpen] = useState(false)
+  const [cityOpen, setCityOpen] = useState(false)
+  const sortRef = useRef(null)
+  const cityRef = useRef(null)
 
   const filtered = useMemo(() => {
     let items = [...LISTINGS]
@@ -86,13 +91,44 @@ export default function MarketplacePage() {
           </div>
 
           <div className="market-head-right">
-            <div className="market-sort">
-              <label className="market-label" htmlFor="sort">Sort By</label>
-              <select id="sort" className="market-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                <option>Newest</option>
-                <option>Lowest Price</option>
-                <option>Highest Volume</option>
-              </select>
+            <div className="market-sort" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label className="market-label">Sort By</label>
+              <div
+                className="dd-root"
+                ref={sortRef}
+                tabIndex={-1}
+                onBlur={(e) => { if (!sortRef.current?.contains(e.relatedTarget)) setSortOpen(false) }}
+              >
+                <button
+                  type="button"
+                  className="market-dropdown-btn"
+                  style={{ width: '160px' }}
+                  onClick={() => setSortOpen(o => !o)}
+                  aria-haspopup="listbox"
+                  aria-expanded={sortOpen}
+                >
+                  {sortBy}
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style={{ width: '18px', height: '18px', color: '#9ca3af', marginLeft: 'auto', flexShrink: 0, transform: sortOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                    <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" fillRule="evenodd" />
+                  </svg>
+                </button>
+                {sortOpen && (
+                  <div className="market-dropdown-menu" style={{ width: '160px' }} role="listbox">
+                    {['Newest', 'Lowest Price', 'Highest Volume'].map(opt => (
+                      <button
+                        type="button"
+                        key={opt}
+                        onClick={() => { setSortBy(opt); setSortOpen(false) }}
+                        className={`market-dropdown-item${sortBy === opt ? ' market-dropdown-item--active' : ''}`}
+                        role="option"
+                        aria-selected={sortBy === opt}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -108,16 +144,64 @@ export default function MarketplacePage() {
             <div className="filter-section">
               <div className="filter-label">City</div>
               <div className="filter-options">
-                {CITIES.map((c) => (
-                  <label key={c} className="check">
-                    <input
-                      type="checkbox"
-                      checked={selectedCities.includes(c)}
-                      onChange={() => toggleInList(c, selectedCities, setSelectedCities)}
-                    />
-                    <span>{c}</span>
-                  </label>
-                ))}
+                <div
+                  className="dd-root"
+                  ref={cityRef}
+                  tabIndex={-1}
+                  style={{ width: '100%' }}
+                  onBlur={(e) => { if (!cityRef.current?.contains(e.relatedTarget)) { setCityOpen(false) } }}
+                >
+                  <button
+                    type="button"
+                    className="market-dropdown-btn"
+                    style={{ width: '100%' }}
+                    onClick={() => setCityOpen(o => !o)}
+                    aria-haspopup="listbox"
+                    aria-expanded={cityOpen}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {selectedCities.length ? selectedCities[0] : 'All Cities'}
+                    </span>
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style={{ width: '18px', height: '18px', color: '#9ca3af', marginLeft: 'auto', flexShrink: 0, transform: cityOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                      <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" fillRule="evenodd" />
+                    </svg>
+                  </button>
+                  {cityOpen && (
+                    <div className="market-dropdown-menu has-custom-scroll" style={{ width: '100%', maxHeight: '240px', overflowY: 'auto' }} role="listbox">
+                      <div style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+                        <input
+                          type="text"
+                          placeholder="Search city..."
+                          value={citySearch}
+                          autoFocus
+                          onChange={(e) => setCitySearch(e.target.value)}
+                          className="market-search-input"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedCities([]); setCitySearch(''); setCityOpen(false) }}
+                        className={`market-dropdown-item${!selectedCities.length ? ' market-dropdown-item--active' : ''}`}
+                        role="option"
+                        aria-selected={!selectedCities.length}
+                      >
+                        All Cities
+                      </button>
+                      {CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase())).map((c) => (
+                        <button
+                          type="button"
+                          key={c}
+                          onClick={() => { setSelectedCities([c]); setCitySearch(''); setCityOpen(false) }}
+                          className={`market-dropdown-item${selectedCities[0] === c ? ' market-dropdown-item--active' : ''}`}
+                          role="option"
+                          aria-selected={selectedCities[0] === c}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

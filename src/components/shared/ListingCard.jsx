@@ -31,6 +31,9 @@ export default function ListingCard({ listing, variants }) {
         <div className="card-meta">
           {listing.city} • {listing.volume?.value} {listing.volume?.unit}
         </div>
+        <div className="card-seller" style={{ fontSize: '0.8rem', color: 'rgba(0, 29, 61, 0.7)', marginTop: '0.2rem', marginBottom: '0.6rem' }}>
+          Seller: <strong>{listing.seller?.name || 'Unknown'}</strong>
+        </div>
 
         <div className="card-row" style={{ alignItems: 'center' }}>
           <span className={`cond-pill ${listing.condition.startsWith('New') ? 'cond-new' : listing.condition.startsWith('Pre-loved') ? 'cond-pre' : 'cond-repair'}`}>

@@ -8,8 +8,9 @@ export default function Footer() {
         <div className="footer-top">
           {/* Brand col */}
           <div className="footer-brand">
-            <Link to="/" className="footer-logo">
-              REST<span>MATERIAL</span>
+            <Link to="/" className="footer-logo" style={{ display: 'flex', alignItems: 'center' }}>
+              <img src="/asset/white-icon-noBG.svg" alt="Logo" style={{ height: '36px', width: 'auto' }} />
+              <div>REST<span>MATERIAL</span></div>
             </Link>
             <p className="footer-tagline">
               Indonesia's first specialized B2B marketplace for leftover
