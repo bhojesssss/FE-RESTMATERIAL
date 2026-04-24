@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useInView } from '../../hooks/useInView'
+import { getSession } from '../auth/auth'
 
 export default function CtaStrip() {
   const [ref, inView] = useInView({ threshold: 0.3 })
@@ -24,7 +25,7 @@ export default function CtaStrip() {
           animate={inView ? { opacity: 1, x: 0 } : {}}
           transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Link to="/create-listing" className="btn-hero btn-hero-primary">
+          <Link to={getSession() ? "/create-listing" : "/login"} className="btn-hero btn-hero-primary">
             Start Selling Free
           </Link>
           <Link

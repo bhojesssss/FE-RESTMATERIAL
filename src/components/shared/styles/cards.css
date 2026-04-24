@@ -250,6 +250,7 @@
   display: flex;
   flex-direction: column;
   transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  min-height: 400px;
 }
 .listing-card:hover {
   transform: translateY(-4px);
@@ -337,4 +338,19 @@
 }
 .co2-badge svg {
   color: #059669;
+}
+
+@media (max-width: 425px) {
+
+  .how-card {
+    padding: 2rem 1.25rem;
+  }
+
+  .category-card {
+    padding: 2rem 1.25rem;
+  }
+
+  .why-card {
+    padding: 1.5rem 1.25rem;
+  }
 }

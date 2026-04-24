@@ -358,3 +358,28 @@
     justify-content: flex-start;
   }
 }
+
+@media (max-width: 425px) {
+
+  .auth-shell {
+    padding-left: 5%;
+    padding-right: 5%;
+  }
+
+  .auth-card {
+    padding: 1.5rem 1.2rem;
+  }
+
+  .auth-title {
+    font-size: clamp(1.4rem, 6vw, 1.8rem);
+  }
+
+  .dash-shell {
+    padding-left: 5%;
+    padding-right: 5%;
+  }
+
+  .dash-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}

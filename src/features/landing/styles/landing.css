@@ -16,7 +16,7 @@
   background-size: cover;
   background-position: center 30%;
   transform-origin: center;
-  transition: transform 0.1s ease-out;
+  transition: transform 1s ease-out;
 }
 .hero-overlay {
   position: absolute;
@@ -111,6 +111,32 @@
   border-color: var(--gold);
   color: var(--gold);
   background: rgba(255, 195, 0, 0.08);
+}
+/* ── Hero Stats ── */
+.hero-stats-row {
+  display: flex;
+  gap: 2.5rem;
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  width: 100%;
+  justify-content: flex-end;
+}
+.hero-stat-item {
+  text-align: right;
+}
+.hero-stat-num {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--bus-yellow);
+  line-height: 1;
+}
+.hero-stat-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 0.35rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 /* ── Scroll indicator ── */
 .scroll-indicator {
@@ -401,5 +427,72 @@
 
   .about-values-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 425px) {
+
+  .hero-content {
+    padding: 0 5%;
+    padding-top: var(--nav-height);
+  }
+
+  .hero-heading {
+    font-size: clamp(1.8rem, 8vw, 2.4rem);
+  }
+
+  .hero-sub {
+    font-size: 0.95rem;
+  }
+
+  .hero-cta-group {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .btn-hero {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hero-stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    justify-content: center;
+  }
+
+  .hero-stat-item {
+    text-align: center;
+  }
+
+  .how-section,
+  .category-section,
+  .why-section {
+    padding: 5rem 5%;
+  }
+
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cta-strip {
+    padding: 4rem 5%;
+  }
+
+  .about-shell {
+    padding-left: 5%;
+    padding-right: 5%;
+  }
+
+  .about-block {
+    padding: 1.2rem 1.2rem;
+  }
+
+  .factor-table th,
+  .factor-table td {
+    padding: 0.65rem 0.6rem;
+    font-size: 0.82rem;
   }
 }

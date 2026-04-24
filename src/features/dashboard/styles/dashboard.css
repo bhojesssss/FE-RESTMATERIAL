@@ -1093,14 +1093,13 @@
   }
 }
 @media (max-width: 900px) {
+
+  /* Show the hamburger toggle button */
   .profile-sidebar-toggle {
     display: inline-flex;
   }
 
-  .profile-sidebar-overlay {
-    display: block;
-  }
-
+  /* Sidebar slides in from the left; hidden by default */
   .profile-sidebar {
     position: fixed;
     z-index: 119;
@@ -1108,21 +1107,73 @@
     left: 0;
     height: calc(100vh - var(--nav-height));
     transform: translateX(-102%);
-    transition: transform 0.28s ease;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     box-shadow: 8px 0 40px rgba(0, 0, 0, 0.2);
   }
 
+  /* Slide in when open */
   .profile-sidebar--open {
     transform: translateX(0);
   }
 
+  /*
+   * IMPORTANT: The overlay must stay display:none until the sidebar opens.
+   * Do NOT set display:block here unconditionally — that blocks the
+   * workspace even when the sidebar is closed.
+   */
   .profile-sidebar-overlay--visible {
     display: block;
+    /* Ensure it sits below sidebar but above workspace content */
+    z-index: 118;
+  }
+
+  /* Toggle button stays above everything so user can always close sidebar */
+  .profile-sidebar-toggle {
+    z-index: 120;
+  }
+
+  /* Give the workspace a stacking context so overlay sits above it */
+  .profile-workspace {
+    position: relative;
+    z-index: 1;
   }
 }
 @media (max-width: 768px) {
 
   .create-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 425px) {
+
+  .profile-topbar {
+    padding: 0.75rem 1rem;
+    gap: 0.6rem;
+  }
+
+  .profile-scroll {
+    padding: 1rem 1rem 2rem;
+  }
+
+  .profile-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .profile-account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-search-kbd {
+    display: none;
+  }
+
+  .create-shell {
+    padding-left: 5%;
+    padding-right: 5%;
+  }
+
+  .create-form {
+    padding: 1.25rem 1rem;
   }
 }

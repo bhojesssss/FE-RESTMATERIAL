@@ -96,15 +96,7 @@ export default function Hero() {
 
         {/* Stats Row */}
         <motion.div
-          style={{
-            display: 'flex',
-            gap: '2.5rem',
-            marginTop: '4rem',
-            paddingTop: '2rem',
-            borderTop: '1px solid rgba(255,255,255,0.12)',
-            width: '100%',
-            justifyContent: 'flex-end',
-          }}
+          className="hero-stats-row"
           variants={fadeUp} initial="hidden" animate="show" custom={4}
         >
           {[
@@ -113,9 +105,9 @@ export default function Hero() {
             { num: `${stats.activeListings.toLocaleString()}+`, label: 'Active Listings' },
             { num: `${stats.users.toLocaleString()}+`, label: 'Registered Users' },
           ].map(({ num, label }) => (
-            <div key={label} style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--bus-yellow)', lineHeight: 1 }}>{num}</div>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginTop: '0.35rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
+            <div key={label} className="hero-stat-item">
+              <div className="hero-stat-num">{num}</div>
+              <div className="hero-stat-label">{label}</div>
             </div>
           ))}
         </motion.div>

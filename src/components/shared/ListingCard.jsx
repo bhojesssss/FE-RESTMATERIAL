@@ -43,7 +43,7 @@ export default function ListingCard({ listing, variants }) {
         </div>
         <div className="card-price" style={{ marginTop: '0.8rem', marginBottom: '0.5rem' }}>{formatIdr(listing.priceIdr)}</div>
 
-        <Link className="card-cta" to={`/marketplace/${listing.id}`}>View Details</Link>
+        {/* <Link className="card-cta" to={`/marketplace/${listing.id}`}>View Details</Link> */}
       </div>
     </motion.article>
   )

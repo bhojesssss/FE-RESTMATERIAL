@@ -328,7 +328,7 @@
   padding: 1rem 1rem 1.05rem;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.35rem;
 }
 .cat-badge {
   width: fit-content;
@@ -766,5 +766,43 @@
 
   .listing-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 425px) {
+
+  .market-shell {
+    padding-left: 5%;
+    padding-right: 5%;
+  }
+
+  .market-sort {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .market-head-right {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dd-root {
+    width: 100%;
+  }
+
+  .market-dropdown-btn {
+    width: 100%;
+  }
+
+  .detail-gallery {
+    height: 240px;
+  }
+
+  .detail-specs {
+    grid-template-columns: 1fr;
+  }
+
+  .seller-card {
+    padding: 1rem;
   }
 }
