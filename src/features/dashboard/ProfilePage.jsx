@@ -4,7 +4,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { getSession, logout, updateUser } from '../auth/auth'
 import { recentListings } from '../../data/profileData'
 import { CITIES, LISTINGS } from '../../data/marketplace'
-import { NavIconDashboard, NavIconMarket, NavIconPlus, NavIconChart, NavIconUsers, NavIconSettings, NavIconHelp, NavIconLogout } from '../../assets/icons/NavIcons'
+import { NavIconDashboard, NavIconPlus, NavIconChart, NavIconUsers, NavIconSettings, NavIconHelp, NavIconLogout } from '../../assets/icons/NavIcons'
 import { MenuIcon, SearchIcon, MailIcon, NotificationIcon } from '../../assets/icons/ProfileIcons'
 import MetricCard from '../../components/shared/MetricCard'
 import { CO2_EMISSION_FACTORS } from './CreateListingPage'
@@ -144,9 +144,7 @@ export default function ProfilePage() {
           <a href="#overview" className={`profile-nav-item ${activeView === 'overview' ? 'profile-nav-item--active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveView('overview'); setSidebarOpen(false); }}>
             <NavIconDashboard /> Dashboard
           </a>
-          <NavLink to="/marketplace" className={({ isActive }) => `profile-nav-item ${isActive ? 'profile-nav-item--active' : ''}`} onClick={() => setSidebarOpen(false)}>
-            <NavIconMarket /> Marketplace
-          </NavLink>
+
           <NavLink to="/create-listing" className={({ isActive }) => `profile-nav-item ${isActive ? 'profile-nav-item--active' : ''}`} onClick={() => setSidebarOpen(false)}>
             <NavIconPlus /> Create listing
           </NavLink>

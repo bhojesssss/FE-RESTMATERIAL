@@ -23,8 +23,9 @@ export default function Navbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <Link to="/" className="nav-logo" style={{ marginRight: 'auto' }} aria-label="Go to landing page">
-        REST<span>MATERIAL</span>
+      <Link to="/" className="nav-logo" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center' }} aria-label="Go to landing page">
+        <img src="/asset/white-icon-noBG.svg" alt="Logo" style={{ height: '36px', width: 'auto' }} />
+        <div>REST<span>MATERIAL</span></div>
       </Link>
 
       <ul className="nav-links" style={{ marginRight: '2rem' }}>
