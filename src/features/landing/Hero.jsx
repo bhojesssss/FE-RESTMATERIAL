@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getImpactStats } from './ImpactLogic'
+import { getSession } from '../auth/auth'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 36 },
@@ -78,7 +79,7 @@ export default function Hero() {
             className="hero-cta-group"
             variants={fadeUp} initial="hidden" animate="show" custom={3}
           >
-            <Link to="/create-listing" className="btn-hero btn-hero-primary">
+            <Link to={getSession() ? "/create-listing" : "/login"} className="btn-hero btn-hero-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
               </svg>
