@@ -1,9 +1,11 @@
-import { request } from "../../services/api";
+// src/features/auth/auth.js
 import { supabase } from "../../services/supabase";
+import { request } from "../../services/api";
 
-const USERS_KEY = "rm_users_v1";
 const SESSION_KEY = "rm_session_v1";
 const TOKEN_KEY = "rm_token";
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function safeJsonParse(value, fallback) {
   try {
@@ -14,19 +16,18 @@ function safeJsonParse(value, fallback) {
   }
 }
 
-export function getUsers() {
-  return safeJsonParse(localStorage.getItem(USERS_KEY), []);
-}
-
 export function getCachedSession() {
   return safeJsonParse(localStorage.getItem(SESSION_KEY), null);
 }
 
+// ─── Session ────────────────────────────────────────────────────────────────
+
 export async function getSession() {
   const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) return getCachedSession(); // Fallback to local session if no token
+  if (!token) return getCachedSession();
 
   try {
+    // Coba ambil profile dari BE (butuh token valid)
     const profile = await request("/auth/me");
     const session = {
       ...profile,
@@ -35,8 +36,8 @@ export async function getSession() {
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
-  } catch (error) {
-    // If validation fails (e.g. 401), request handler already cleans token and session
+  } catch {
+    // BE tidak reachable atau token expired — fallback ke cache
     return getCachedSession();
   }
 }
@@ -44,92 +45,93 @@ export async function getSession() {
 export function logout() {
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(TOKEN_KEY);
+  // Juga sign out dari Supabase supaya session Supabase ikut bersih
+  supabase.auth.signOut().catch(() => {});
 }
+
+// ─── Register ───────────────────────────────────────────────────────────────
 
 export async function register({ name, email, password }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name } }, // disimpan ke user_metadata
+    options: {
+      data: { name }, // disimpan ke user_metadata Supabase
+    },
   });
-  if (error) throw error;
 
+  if (error) {
+    // Translate pesan error Supabase supaya user-friendly
+    if (error.message?.includes("already registered")) {
+      throw new Error("Email sudah terdaftar. Coba login.");
+    }
+    throw new Error(error.message || "Registrasi gagal.");
+  }
+
+  // Supabase bisa return session null kalau email confirmation aktif
   const token = data.session?.access_token;
-  if (token) localStorage.setItem(TOKEN_KEY, token);
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
 
   const session = {
-    ...data.user,
     userId: data.user.id,
+    id: data.user.id,
     name,
-    email,
+    email: data.user.email,
     loggedInAt: new Date().toISOString(),
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   return session;
 }
+
+// ─── Login ──────────────────────────────────────────────────────────────────
 
 export async function login({ email, password }) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
-  if (error) throw error;
+
+  if (error) {
+    // Translate pesan error Supabase supaya user-friendly
+    if (
+      error.message?.includes("Invalid login credentials") ||
+      error.message?.includes("invalid_credentials")
+    ) {
+      throw new Error("Email atau password salah.");
+    }
+    throw new Error(error.message || "Login gagal.");
+  }
 
   const token = data.session.access_token;
   localStorage.setItem(TOKEN_KEY, token);
 
   const session = {
-    ...data.user,
     userId: data.user.id,
+    id: data.user.id,
     name: data.user.user_metadata?.name || email,
-    email,
+    email: data.user.email,
     loggedInAt: new Date().toISOString(),
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   return session;
 }
 
-export async function updateUser(userId, data) {
-  try {
-    const profile = await request("/auth/me", {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
+// ─── Update Profile (local fallback, BE endpoint belum ada) ─────────────────
 
-    const session = getCachedSession();
-    if (session) {
-      const nextSession = { ...session, ...profile };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
-      return nextSession;
-    }
-  } catch (err) {
-    console.warn("Fallback to local update user");
-    const users = getUsers();
-    const userIndex = users.findIndex((u) => u.id === userId);
-    if (userIndex === -1) throw new Error("User not found");
-
-    const user = users[userIndex];
-    const updatedUser = {
-      ...user,
-      name: data.name !== undefined ? String(data.name).trim() : user.name,
-      city: data.city !== undefined ? String(data.city).trim() : user.city,
-      phone: data.phone !== undefined ? String(data.phone).trim() : user.phone,
-    };
-
-    users[userIndex] = updatedUser;
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-
-    const session = getCachedSession();
-    if (session && session.userId === userId) {
-      const nextSession = {
-        ...session,
-        name: updatedUser.name,
-        city: updatedUser.city,
-        phone: updatedUser.phone,
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
-      return nextSession;
-    }
-    return null;
+export function updateUser(userId, data) {
+  const session = getCachedSession();
+  if (!session || session.userId !== userId) {
+    throw new Error("User not found");
   }
+
+  const nextSession = {
+    ...session,
+    name: data.name !== undefined ? String(data.name).trim() : session.name,
+    city: data.city !== undefined ? String(data.city).trim() : session.city,
+    phone: data.phone !== undefined ? String(data.phone).trim() : session.phone,
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+  return nextSession;
 }
