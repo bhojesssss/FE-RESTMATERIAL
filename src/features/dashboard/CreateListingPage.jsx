@@ -1,8 +1,9 @@
-import { useState, useMemo, useRef, useCallback } from 'react'
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { UploadIcon, SuccessCheckIcon } from '../../assets/icons/CreateListingIcons'
 import FormInput from '../../components/common/FormInput'
+import { request } from '../../services/api'
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -189,6 +190,18 @@ export default function CreateListingPage() {
   const [form, setForm] = useState(INITIAL_FORM)
   const [submitted, setSubmitted] = useState(false)
   const [errors, setErrors] = useState({})
+  const [categories, setCategories] = useState(MATERIAL_CATEGORIES)
+
+  useEffect(() => {
+    request('/categories')
+      .then((data) => {
+        if (Array.isArray(data)) {
+          if (typeof data[0] === 'string') setCategories(data);
+          else setCategories(data.map((c) => c.name || c.category || c));
+        }
+      })
+      .catch((err) => console.warn('Failed to load categories, using fallback'));
+  }, []);
 
   const co2Preview = useMemo(() => {
     const weight = parseFloat(form.weightKg)
@@ -225,7 +238,7 @@ export default function CreateListingPage() {
     return next
   }
 
-  function onSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault()
     const validationErrors = validate()
     if (Object.keys(validationErrors).length > 0) {
@@ -235,28 +248,45 @@ export default function CreateListingPage() {
       return
     }
 
-    const listing = {
-      id: `listing-${Date.now()}`,
+    const payload = {
       category: form.category,
       name: form.title.trim(),
       city: form.city,
-      volume: { value: parseFloat(form.weightKg), unit: 'kg' },
+      estimated_weight_kg: parseFloat(form.weightKg),
       condition: form.condition,
-      status: 'Available',
-      priceIdr: parseInt(form.priceIdr, 10),
-      uploadedAt: new Date().toISOString().slice(0, 10),
+      status: 'AVAILABLE',
+      price_per_unit: parseInt(form.priceIdr, 10),
       description: form.description.trim(),
-      co2SavedKg: co2Preview,
-      seller: null,
-      images: [],
     }
 
-    // Persist ke localStorage supaya listing baru muncul di marketplace
-    const existing = JSON.parse(localStorage.getItem('rm_listings_draft') || '[]')
-    localStorage.setItem('rm_listings_draft', JSON.stringify([listing, ...existing]))
+    try {
+      await request('/listings', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      setSubmitted(true)
+    } catch (error) {
+      console.warn('API fallback: saving to rm_listings_draft')
+      const listing = {
+        id: `listing-${Date.now()}`,
+        category: form.category,
+        name: form.title.trim(),
+        city: form.city,
+        volume: { value: parseFloat(form.weightKg), unit: 'kg' },
+        condition: form.condition,
+        status: 'Available',
+        priceIdr: parseInt(form.priceIdr, 10),
+        uploadedAt: new Date().toISOString().slice(0, 10),
+        description: form.description.trim(),
+        co2SavedKg: co2Preview,
+        seller: null,
+        images: [],
+      }
 
-    console.log('[CreateListing] Submitted listing (demo):', listing)
-    setSubmitted(true)
+      const existing = JSON.parse(localStorage.getItem('rm_listings_draft') || '[]')
+      localStorage.setItem('rm_listings_draft', JSON.stringify([listing, ...existing]))
+      setSubmitted(true)
+    }
   }
 
   // ── Success state ──
@@ -360,7 +390,7 @@ export default function CreateListingPage() {
               error={errors.category}
             >
               <option value="" disabled>Select category</option>
-              {MATERIAL_CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </FormInput>

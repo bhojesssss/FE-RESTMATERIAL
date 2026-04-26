@@ -1,10 +1,10 @@
-import { useRef, useMemo, useState } from 'react'
+import { useRef, useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { CITIES, CONDITIONS, LISTINGS, MATERIAL_CATEGORIES } from '../../data/marketplace'
 import { EmptySearchIcon } from '../../assets/icons/MarketplaceIcons'
 import ListingCard from '../../components/shared/ListingCard'
-// here fetch api tp integrated backend
+import { request } from '../../services/api'
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
@@ -49,8 +49,35 @@ export default function MarketplacePage() {
   const sortRef = useRef(null)
   const cityRef = useRef(null)
 
+  const [listingsData, setListingsData] = useState(LISTINGS)
+
+  useEffect(() => {
+    const query = new URLSearchParams()
+    if (selectedCities.length) query.append('city', selectedCities[0])
+    if (selectedCategories.length) {
+      selectedCategories.forEach(c => query.append('category', c))
+    }
+
+    request(`/listings?${query.toString()}`)
+      .then(data => {
+        if (!Array.isArray(data)) return
+        const mapped = data.map(item => ({
+          ...item,
+          priceIdr: item.price_per_unit ?? item.priceIdr,
+          weightKg: item.estimated_weight_kg ?? item.weightKg,
+          status: item.status === 'AVAILABLE' ? 'Available' : (item.status === 'SOLD' ? 'Sold Out' : item.status),
+          volume: item.volume || { value: item.estimated_weight_kg, unit: 'kg' }
+        }))
+        setListingsData(mapped)
+      })
+      .catch(err => {
+        console.warn('Fallback to local LISTINGS')
+        setListingsData(LISTINGS)
+      })
+  }, [selectedCities, selectedCategories])
+
   const filtered = useMemo(() => {
-    let items = [...LISTINGS]
+    let items = [...listingsData]
 
     if (selectedCities.length) items = items.filter((l) => selectedCities.includes(l.city))
     if (selectedCategories.length) items = items.filter((l) => selectedCategories.includes(l.category))
@@ -64,7 +91,7 @@ export default function MarketplacePage() {
     if (sortBy === 'Highest Volume') items.sort((a, b) => (b.volume?.value || 0) - (a.volume?.value || 0))
 
     return items
-  }, [priceMax, priceMin, selectedCategories, selectedCities, selectedConditions, sortBy, status])
+  }, [priceMax, priceMin, selectedCategories, selectedCities, selectedConditions, sortBy, status, listingsData])
 
   function toggleInList(value, list, setList) {
     setList((prev) => (prev.includes(value) ? prev.filter((x) => x !== value) : [...prev, value]))

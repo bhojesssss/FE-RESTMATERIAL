@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { request } from '../../services/api'
 import { getSession, logout, updateUser } from '../auth/auth'
 import { recentListings } from '../../data/profileData'
 import { CITIES, LISTINGS } from '../../data/marketplace'
@@ -45,11 +46,37 @@ export default function ProfilePage() {
       return draft ? JSON.parse(draft) : []
     } catch { return [] }
   })
+  const [apiListings, setApiListings] = useState(null)
   void motion
 
   useEffect(() => {
     if (!session) navigate('/login', { replace: true })
   }, [navigate, session])
+
+  useEffect(() => {
+    if (!session) return
+    request('/listings/me')
+      .then(data => {
+        if (Array.isArray(data)) {
+          setApiListings(data.map(item => ({
+            ...item,
+            priceIdr: item.price_per_unit ?? item.priceIdr,
+            weightKg: item.estimated_weight_kg ?? item.weightKg,
+            status: item.status === 'AVAILABLE' ? 'Available' : (item.status === 'SOLD' ? 'Sold Out' : item.status),
+            volume: item.volume || { value: item.estimated_weight_kg, unit: 'kg' }
+          })))
+        }
+      })
+      .catch(err => {
+        console.warn('API fallback for /listings/me, using local storage')
+      })
+  }, [session])
+
+  const allItems = useMemo(() => {
+    if (apiListings !== null) return apiListings
+    const myStaticLists = LISTINGS.filter(l => l.seller?.id === session?.userId)
+    return [...(Array.isArray(draftListings) ? draftListings : []), ...myStaticLists]
+  }, [apiListings, draftListings, session])
 
   const pipelineStats = useMemo(() => {
     if (!session) return { drafts: 0, active: 0, sold: 0, co2: 0 }
@@ -59,15 +86,12 @@ export default function ProfilePage() {
     let sold = 0
     let co2 = 0
 
-    const myStaticLists = LISTINGS.filter(l => l.seller?.id === session.userId)
-    const allItems = [...(Array.isArray(draftListings) ? draftListings : []), ...myStaticLists]
-
     allItems.forEach(item => {
       const isSold = item.status?.startsWith('Sold') || soldIds.includes(item.id)
       if (isSold) {
         sold++
         const factor = CO2_EMISSION_FACTORS[item.category] || 0.5
-        co2 += (item.volume?.value || 0) * factor
+        co2 += (item.volume?.value || item.weightKg || item.estimated_weight_kg || 0) * factor
       } else if (item.id?.toString().startsWith('listing-')) {
         drafts++
       } else if (item.status === 'Available') {
@@ -76,7 +100,7 @@ export default function ProfilePage() {
     })
     
     return { drafts, active, sold, co2: Math.round(co2) }
-  }, [session, draftListings, soldIds])
+  }, [session, allItems, soldIds])
 
   const totalUserListings = pipelineStats.drafts + pipelineStats.active + pipelineStats.sold
 
@@ -105,7 +129,20 @@ export default function ProfilePage() {
     }
   }
 
-  function handleMarkAsSold(id) {
+  async function handleMarkAsSold(id) {
+    if (apiListings !== null) {
+      try {
+        await request(`/listings/${id}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'SOLD' })
+        })
+        setApiListings(prev => prev.map(item => item.id === id ? { ...item, status: 'Sold Out' } : item))
+      } catch (err) {
+        alert('Failed to update status on server')
+      }
+      return
+    }
+
     const draftIdx = Array.isArray(draftListings) ? draftListings.findIndex(d => d.id === id) : -1
     if (draftIdx >= 0) {
       const nextDrafts = [...draftListings]
@@ -369,35 +406,21 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="manage-list-grid">
-                  {[...(Array.isArray(draftListings) ? draftListings : [])].map(l => (
-                    <div className="manage-card" key={l.id}>
-                      <div className="manage-card-info">
-                        <div className="manage-card-title">{l.name}</div>
-                        <div className="manage-card-meta">{l.category} • {l.volume?.value} {l.volume?.unit}</div>
-                      </div>
-                      <div className="manage-card-actions">
-                        <span className={`manage-status ${l.status === 'Sold Out' ? 'manage-status--sold' : 'manage-status--draft'}`}>
-                          {l.status === 'Sold Out' ? 'Sold' : 'Draft'}
-                        </span>
-                        {l.status !== 'Sold Out' && (
-                          <button type="button" className="manage-card-btn" onClick={() => handleMarkAsSold(l.id)}>
-                            Mark as Sold
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {LISTINGS.filter(l => l.seller?.id === session.userId).map(l => {
+                  {allItems.map(l => {
                     const isSold = l.status?.startsWith('Sold') || soldIds.includes(l.id)
+                    const isDraft = l.id?.toString().startsWith('listing-') && apiListings === null
+                    const displayStatus = isSold ? 'Sold' : (isDraft ? 'Draft' : 'Active')
+                    const statusClass = isSold ? 'manage-status--sold' : (isDraft ? 'manage-status--draft' : 'manage-status--active')
+
                     return (
                       <div className="manage-card" key={l.id}>
                         <div className="manage-card-info">
                           <div className="manage-card-title">{l.name}</div>
-                          <div className="manage-card-meta">{l.category} • {l.volume?.value} {l.volume?.unit}</div>
+                          <div className="manage-card-meta">{l.category} • {l.volume?.value || l.weightKg} {l.volume?.unit || 'kg'}</div>
                         </div>
                         <div className="manage-card-actions">
-                          <span className={`manage-status ${isSold ? 'manage-status--sold' : 'manage-status--active'}`}>
-                            {isSold ? 'Sold' : 'Active'}
+                          <span className={`manage-status ${statusClass}`}>
+                            {displayStatus}
                           </span>
                           {!isSold && (
                             <button type="button" className="manage-card-btn" onClick={() => handleMarkAsSold(l.id)}>
@@ -408,7 +431,7 @@ export default function ProfilePage() {
                       </div>
                     )
                   })}
-                  {(totalUserListings === 0) && (
+                  {(allItems.length === 0) && (
                     <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
                       You haven't posted any materials yet.
                     </div>
