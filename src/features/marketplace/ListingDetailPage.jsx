@@ -1,9 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { LISTINGS } from '../../data/marketplace'
-import { PlaceholderImageIconLarge } from '../../assets/icons/MarketplaceIcons'
 import Co2Badge from '../../components/shared/Co2Badge'
+import { request } from '../../services/api'
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -25,11 +25,50 @@ export default function ListingDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const listing = useMemo(() => LISTINGS.find((l) => l.id === id), [id])
-  const otherFromSeller = useMemo(() => {
-    if (!listing) return []
-    return LISTINGS.filter((l) => l.seller?.id === listing.seller?.id && l.id !== listing.id)
-  }, [listing])
+  const [listing, setListing] = useState(null)
+  const [otherFromSeller, setOtherFromSeller] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    request(`/listings/${id}`)
+      .then(data => {
+        const item = {
+          ...data,
+          priceIdr: data.price_per_unit ?? data.priceIdr,
+          weightKg: data.estimated_weight_kg ?? data.weightKg,
+          status: data.status === 'AVAILABLE' ? 'Available' : (data.status === 'SOLD' ? 'Sold' : data.status),
+          volume: data.volume || { value: data.estimated_weight_kg, unit: 'kg' }
+        }
+        setListing(item)
+
+        if (item.seller?.id) {
+          request(`/listings?seller_id=${item.seller.id}`)
+            .then(others => {
+              if (Array.isArray(others)) {
+                setOtherFromSeller(others.map(o => ({
+                  ...o,
+                  priceIdr: o.price_per_unit ?? o.priceIdr,
+                  status: o.status === 'AVAILABLE' ? 'Available' : (o.status === 'SOLD' ? 'Sold' : o.status),
+                  volume: o.volume || { value: o.estimated_weight_kg, unit: 'kg' }
+                })).filter(o => o.id !== item.id))
+              }
+            })
+            .catch(() => setOtherFromSeller([]))
+        }
+      })
+      .catch(err => {
+        console.warn('Fallback to local listings')
+        const localItem = LISTINGS.find(l => String(l.id) === String(id))
+        if (localItem) {
+          setListing(localItem)
+          setOtherFromSeller(LISTINGS.filter(l => l.seller?.id === localItem.seller?.id && l.id !== localItem.id))
+        }
+      })
+      .finally(() => setLoading(false))
+  }, [id])
+
+  if (loading) return null;
 
   if (!listing) {
     return (
@@ -59,11 +98,15 @@ export default function ListingDetailPage() {
           {/* Left 60% */}
           <section className="detail-left">
             <div className="detail-gallery">
-              {listing.images?.[0] ? (
+              {listing.images?.length > 0 ? (
                 <img src={listing.images[0]} alt={listing.name} />
               ) : (
-                <div className="detail-ph" aria-hidden="true">
-                  <PlaceholderImageIconLarge />
+                <div className="detail-ph" aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
                 </div>
               )}
             </div>

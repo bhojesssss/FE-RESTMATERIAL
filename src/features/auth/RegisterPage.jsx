@@ -20,7 +20,10 @@ export default function RegisterPage() {
   void motion
 
   const passwordsMatch = password && confirm && password === confirm
-  const canSubmit = useMemo(() => name.trim() && email.trim() && password && passwordsMatch, [name, email, password, passwordsMatch])
+  const canSubmit = useMemo(
+    () => name.trim() && email.trim() && password && passwordsMatch,
+    [name, email, password, passwordsMatch]
+  )
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -29,10 +32,10 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
     try {
-      register({ name, email, password })
+      await register({ name, email, password })  // FIX: tambah await
       navigate('/profile')
     } catch (err) {
-      setError(err?.message || 'Registration failed')
+      setError(err?.message || 'Registrasi gagal. Coba lagi.')
     } finally {
       setLoading(false)
     }
@@ -48,14 +51,14 @@ export default function RegisterPage() {
           transition={{ duration: 0.5, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="auth-head">
-            <span className="section-tag">Get Started</span>
+            <span className="section-tag">New here?</span>
             <h1 className="auth-title">Register</h1>
-            <p className="auth-sub">Create an account to start listing and trading materials.</p>
+            <p className="auth-sub">Create an account to start listing your surplus materials.</p>
           </div>
 
           <form onSubmit={onSubmit} className="auth-form">
             <label className="auth-label">
-              Full name
+              Name
               <input
                 className="auth-input"
                 type="text"
@@ -80,42 +83,46 @@ export default function RegisterPage() {
               />
             </label>
 
-            <div className="auth-row">
-              <label className="auth-label">
-                Password
-                <input
-                  className="auth-input"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="Create password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </label>
+            <label className="auth-label">
+              Password
+              <input
+                className="auth-input"
+                type="password"
+                autoComplete="new-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </label>
 
-              <label className="auth-label">
-                Confirm
-                <input
-                  className="auth-input"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="Confirm password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  required
-                />
-              </label>
-            </div>
+            <label className="auth-label">
+              Confirm Password
+              <input
+                className="auth-input"
+                type="password"
+                autoComplete="new-password"
+                placeholder="••••••••"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+              />
+            </label>
 
-            {!passwordsMatch && confirm ? (
+            {/* Passwords don't match warning */}
+            {confirm && !passwordsMatch && (
               <div className="auth-error" role="alert">Passwords do not match</div>
-            ) : null}
+            )}
 
+            {/* Server/Supabase error */}
             {error ? <div className="auth-error" role="alert">{error}</div> : null}
 
-            <button className="auth-btn auth-btn-primary" type="submit" disabled={!canSubmit || loading}>
-              {loading ? 'Creating…' : 'Create account'}
+            <button
+              className="auth-btn auth-btn-primary"
+              type="submit"
+              disabled={!canSubmit || loading}
+            >
+              {loading ? 'Creating account…' : 'Register'}
             </button>
 
             <div className="auth-foot">

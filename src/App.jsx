@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import Navbar from './components/common/Navbar'
 import Footer from './components/common/Footer'
+import Toast from './components/common/Toast'
 import LandingPage from './features/landing/LandingPage'
 import LoginPage from './features/auth/LoginPage'
 import RegisterPage from './features/auth/RegisterPage'
@@ -35,6 +36,7 @@ function AppRoutes() {
       </AnimatePresence>
       {showFooter ? <Footer /> : null}
       <ChatWidget />
+      <Toast />
     </>
   )
 }

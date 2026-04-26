@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { getSession, logout, updateUser } from '../auth/auth'
+import { request } from '../../services/api'
+import { getSession, getCachedSession, logout, updateUser } from '../auth/auth'
 import { recentListings } from '../../data/profileData'
 import { CITIES, LISTINGS } from '../../data/marketplace'
 import { NavIconDashboard, NavIconPlus, NavIconChart, NavIconUsers, NavIconSettings, NavIconHelp, NavIconLogout } from '../../assets/icons/NavIcons'
 import { MenuIcon, SearchIcon, MailIcon, NotificationIcon } from '../../assets/icons/ProfileIcons'
 import MetricCard from '../../components/shared/MetricCard'
 import { CO2_EMISSION_FACTORS } from './CreateListingPage'
-
 
 const pageMotion = {
   initial: { opacity: 0 },
@@ -26,67 +26,146 @@ const fadeUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 }
 
+// ── Status helpers ──────────────────────────────────────────────────────────
+// BE statuses: AVAILABLE | RESERVED | SOLD | INACTIVE
+// FE display labels
+function toDisplayStatus(beStatus) {
+  switch (beStatus) {
+    case 'AVAILABLE': return 'Active'
+    case 'RESERVED': return 'Reserved'
+    case 'SOLD': return 'Sold'
+    case 'INACTIVE': return 'Paused'
+    default: return beStatus || 'Active'
+  }
+}
+
+function toStatusClass(beStatus) {
+  switch (beStatus) {
+    case 'AVAILABLE': return 'manage-status--active'
+    case 'RESERVED': return 'manage-status--draft'
+    case 'SOLD': return 'manage-status--sold'
+    case 'INACTIVE': return 'manage-status--draft'
+    default: return 'manage-status--active'
+  }
+}
 
 export default function ProfilePage() {
   const navigate = useNavigate()
-  const [session, setSession] = useState(() => getSession())
+
+  const [session, setSession] = useState(() => getCachedSession())
+  const [sessionLoading, setSessionLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState(() => ({
-    name: session?.name || '',
+    name: session?.full_name || session?.name || '',
     city: session?.city || '',
-    phone: session?.phone || ''
+    phone: session?.phone || '',
   }))
   const [activeView, setActiveView] = useState('overview')
-  const [soldIds, setSoldIds] = useState(() => JSON.parse(localStorage.getItem('rm_sold_ids') || '[]'))
+
+  // Listings state — null = tidak ada data dari BE (pakai fallback), array = dari BE
+  const [apiListings, setApiListings] = useState(null)
+  const [listingsLoading, setListingsLoading] = useState(false)
+
+  // Optimistic state untuk aksi yang sedang diproses { [listingId]: 'pausing'|'deleting' }
+  const [pendingActions, setPendingActions] = useState({})
+
+  // Fallback localStorage listings (untuk draft / offline mode)
   const [draftListings, setDraftListings] = useState(() => {
     try {
       const draft = localStorage.getItem('rm_listings_draft')
       return draft ? JSON.parse(draft) : []
     } catch { return [] }
   })
+
   void motion
 
+  // ── 1. Resolve session dari BE ──────────────────────────────────────────
   useEffect(() => {
-    if (!session) navigate('/login', { replace: true })
-  }, [navigate, session])
+    getSession()
+      .then(resolved => {
+        if (resolved) {
+          setSession(resolved)
+          setEditForm({
+            name: resolved.full_name || resolved.name || '',
+            city: resolved.city || '',
+            phone: resolved.phone || '',
+          })
+        } else {
+          navigate('/login', { replace: true })
+        }
+      })
+      .catch(() => navigate('/login', { replace: true }))
+      .finally(() => setSessionLoading(false))
+  }, [navigate])
+
+  // ── 2. Load listings dari BE ────────────────────────────────────────────
+  // GET /listings/me returns { count, data: [...] } — bukan array langsung
+  useEffect(() => {
+    if (!session) return
+    setListingsLoading(true)
+    request('/listings/me')
+      .then(res => {
+        // BE returns { count, data: [...] }
+        const items = Array.isArray(res?.data) ? res.data : []
+        setApiListings(items.map(item => ({
+          ...item,
+          // Normalize field names supaya konsisten dengan FE lama
+          name: item.title,
+          category: item.category?.name || item.category || '',
+          priceIdr: item.price_per_unit,
+          weightKg: item.estimated_weight_kg,
+          // status tetap pakai BE enum (AVAILABLE, SOLD, dll) — di-render lewat toDisplayStatus()
+          primaryPhoto: item.photos?.find(p => p.is_primary)?.url || item.photos?.[0]?.url || null,
+        })))
+      })
+      .catch(() => {
+        console.warn('GET /listings/me failed — using localStorage fallback')
+        // apiListings tetap null → tampilkan draftListings
+      })
+      .finally(() => setListingsLoading(false))
+  }, [session])
+
+  // ── Derived data ────────────────────────────────────────────────────────
+  const allItems = useMemo(() => {
+    if (apiListings !== null) return apiListings
+    // Fallback: draft + static listings milik user ini
+    const myStaticLists = LISTINGS.filter(l => l.seller?.id === session?.userId)
+    return [...(Array.isArray(draftListings) ? draftListings : []), ...myStaticLists]
+  }, [apiListings, draftListings, session])
 
   const pipelineStats = useMemo(() => {
-    if (!session) return { drafts: 0, active: 0, sold: 0, co2: 0 }
-    
-    let drafts = 0
-    let active = 0
-    let sold = 0
-    let co2 = 0
-
-    const myStaticLists = LISTINGS.filter(l => l.seller?.id === session.userId)
-    const allItems = [...(Array.isArray(draftListings) ? draftListings : []), ...myStaticLists]
+    if (!session) return { active: 0, reserved: 0, paused: 0, sold: 0, co2: 0 }
+    let active = 0, reserved = 0, paused = 0, sold = 0, co2 = 0
 
     allItems.forEach(item => {
-      const isSold = item.status?.startsWith('Sold') || soldIds.includes(item.id)
-      if (isSold) {
+      const s = item.status
+      if (s === 'SOLD' || s === 'Sold Out') {
         sold++
         const factor = CO2_EMISSION_FACTORS[item.category] || 0.5
-        co2 += (item.volume?.value || 0) * factor
-      } else if (item.id?.toString().startsWith('listing-')) {
-        drafts++
-      } else if (item.status === 'Available') {
-        active++
+        co2 += (item.estimated_weight_kg || item.weightKg || 0) * factor
+      } else if (s === 'RESERVED') {
+        reserved++
+      } else if (s === 'INACTIVE') {
+        paused++
+      } else {
+        active++ // AVAILABLE + draft fallback
       }
     })
-    
-    return { drafts, active, sold, co2: Math.round(co2) }
-  }, [session, draftListings, soldIds])
 
-  const totalUserListings = pipelineStats.drafts + pipelineStats.active + pipelineStats.sold
+    return { active, reserved, paused, sold, co2: Math.round(co2) }
+  }, [session, allItems])
 
-  const displayName = useMemo(() => session?.name || 'User', [session])
+  const totalUserListings = allItems.length
+
+  // full_name dari public.users, name dari fallback cache
+  const displayName = useMemo(() => session?.full_name || session?.name || 'User', [session])
   const initials = useMemo(() => {
     const parts = String(displayName).trim().split(/\s+/)
-    const a = parts[0]?.[0] || 'U'
-    const b = parts[1]?.[0] || ''
-    return (a + b).toUpperCase()
+    return ((parts[0]?.[0] || 'U') + (parts[1]?.[0] || '')).toUpperCase()
   }, [displayName])
+
+  // ── Handlers ────────────────────────────────────────────────────────────
 
   function onLogout() {
     logout()
@@ -105,24 +184,83 @@ export default function ProfilePage() {
     }
   }
 
-  function handleMarkAsSold(id) {
-    const draftIdx = Array.isArray(draftListings) ? draftListings.findIndex(d => d.id === id) : -1
-    if (draftIdx >= 0) {
-      const nextDrafts = [...draftListings]
-      nextDrafts[draftIdx] = { ...nextDrafts[draftIdx], status: 'Sold Out' }
-      setDraftListings(nextDrafts)
-      localStorage.setItem('rm_listings_draft', JSON.stringify(nextDrafts))
-    } else {
-      if (!soldIds.includes(id)) {
-        const nextSoldIds = [...soldIds, id]
-        setSoldIds(nextSoldIds)
-        localStorage.setItem('rm_sold_ids', JSON.stringify(nextSoldIds))
-      }
+  // Pause listing: AVAILABLE → INACTIVE  (FIX: was PUT + 'SOLD', now PATCH + 'INACTIVE')
+  // BE tidak izinkan set SOLD manual — SOLD hanya lewat transaction flow
+  async function handlePauseListing(id) {
+    if (apiListings === null) return // draft mode — tidak ada endpoint
+
+    setPendingActions(prev => ({ ...prev, [id]: 'pausing' }))
+    try {
+      await request(`/listings/${id}/status`, {
+        method: 'PATCH', // FIX: was 'PUT'
+        body: JSON.stringify({ status: 'INACTIVE' }),
+      })
+      setApiListings(prev => prev.map(item =>
+        item.id === id ? { ...item, status: 'INACTIVE' } : item
+      ))
+    } catch (err) {
+      alert(`Gagal pause listing: ${err.message}`)
+    } finally {
+      setPendingActions(prev => { const n = { ...prev }; delete n[id]; return n })
     }
+  }
+
+  // Re-activate listing: INACTIVE → AVAILABLE
+  async function handleActivateListing(id) {
+    if (apiListings === null) return
+
+    setPendingActions(prev => ({ ...prev, [id]: 'activating' }))
+    try {
+      await request(`/listings/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'AVAILABLE' }),
+      })
+      setApiListings(prev => prev.map(item =>
+        item.id === id ? { ...item, status: 'AVAILABLE' } : item
+      ))
+    } catch (err) {
+      alert(`Gagal aktifkan listing: ${err.message}`)
+    } finally {
+      setPendingActions(prev => { const n = { ...prev }; delete n[id]; return n })
+    }
+  }
+
+  // Delete listing: DELETE /listings/:id
+  async function handleDeleteListing(id, title) {
+    const confirmed = window.confirm(`Hapus listing "${title}"? Tindakan ini tidak bisa dibatalkan.`)
+    if (!confirmed) return
+
+    if (apiListings === null) {
+      // Draft mode — hapus dari localStorage
+      const next = draftListings.filter(d => d.id !== id)
+      setDraftListings(next)
+      localStorage.setItem('rm_listings_draft', JSON.stringify(next))
+      return
+    }
+
+    setPendingActions(prev => ({ ...prev, [id]: 'deleting' }))
+    try {
+      await request(`/listings/${id}`, { method: 'DELETE' })
+      setApiListings(prev => prev.filter(item => item.id !== id))
+    } catch (err) {
+      alert(`Gagal hapus listing: ${err.message}`)
+    } finally {
+      setPendingActions(prev => { const n = { ...prev }; delete n[id]; return n })
+    }
+  }
+
+  // ── Loading / guard states ───────────────────────────────────────────────
+  if (sessionLoading && !session) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: '#64748b' }}>
+        Loading…
+      </div>
+    )
   }
 
   if (!session) return null
 
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <motion.main className="profile-dashboard" {...pageMotion}>
       <button
@@ -134,6 +272,7 @@ export default function ProfilePage() {
         <MenuIcon />
       </button>
 
+      {/* ── Sidebar ── */}
       <aside className={`profile-sidebar ${sidebarOpen ? 'profile-sidebar--open' : ''}`}>
         <Link to="/" className="profile-sidebar-brand" onClick={() => setSidebarOpen(false)}>
           REST<span>MATERIAL</span>
@@ -141,16 +280,30 @@ export default function ProfilePage() {
 
         <nav className="profile-side-nav" aria-label="Dashboard menu">
           <div className="profile-nav-label">Menu</div>
-          <a href="#overview" className={`profile-nav-item ${activeView === 'overview' ? 'profile-nav-item--active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveView('overview'); setSidebarOpen(false); }}>
+          <a
+            href="#overview"
+            className={`profile-nav-item ${activeView === 'overview' ? 'profile-nav-item--active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('overview'); setSidebarOpen(false) }}
+          >
             <NavIconDashboard /> Dashboard
           </a>
 
-          <NavLink to="/create-listing" className={({ isActive }) => `profile-nav-item ${isActive ? 'profile-nav-item--active' : ''}`} onClick={() => setSidebarOpen(false)}>
+          <NavLink
+            to="/create-listing"
+            className={({ isActive }) => `profile-nav-item ${isActive ? 'profile-nav-item--active' : ''}`}
+            onClick={() => setSidebarOpen(false)}
+          >
             <NavIconPlus /> Create listing
           </NavLink>
-          <span className="profile-nav-item profile-nav-item--disabled">
-            <NavIconChart /> Analytics <small>(soon)</small>
-          </span>
+
+          <a
+            href="#listings"
+            className={`profile-nav-item ${activeView === 'listings' ? 'profile-nav-item--active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('listings'); setSidebarOpen(false) }}
+          >
+            <NavIconChart /> Manage listings
+          </a>
+
           <span className="profile-nav-item profile-nav-item--disabled">
             <NavIconUsers /> Network <small>(soon)</small>
           </span>
@@ -171,7 +324,14 @@ export default function ProfilePage() {
           <div className="profile-promo-title">Your Listings</div>
           <div className="profile-promo-text">{totalUserListings}</div>
           <p className="profile-promo-sub">Materials currently listed</p>
-          <button type="button" className="profile-promo-btn" style={{ width: '100%', padding: '0.45rem', fontSize: '0.8rem' }} onClick={() => { setActiveView('listings'); setSidebarOpen(false); }}>Manage Listings</button>
+          <button
+            type="button"
+            className="profile-promo-btn"
+            style={{ width: '100%', padding: '0.45rem', fontSize: '0.8rem' }}
+            onClick={() => { setActiveView('listings'); setSidebarOpen(false) }}
+          >
+            Manage Listings
+          </button>
         </div>
       </aside>
 
@@ -183,6 +343,7 @@ export default function ProfilePage() {
         tabIndex={sidebarOpen ? 0 : -1}
       />
 
+      {/* ── Main workspace ── */}
       <div className="profile-workspace">
         <header className="profile-topbar">
           <div className="profile-search-wrap">
@@ -209,8 +370,16 @@ export default function ProfilePage() {
 
         <div className="profile-scroll">
           <AnimatePresence mode="wait">
-            {activeView === 'overview' ? (
-              <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+
+            {/* ══ OVERVIEW VIEW ══════════════════════════════════════════ */}
+            {activeView === 'overview' && (
+              <motion.div
+                key="overview"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
                 <motion.div className="profile-page-head" variants={stagger} initial="hidden" animate="show">
                   <motion.div variants={fadeUp}>
                     <h1 className="profile-page-title">Dashboard</h1>
@@ -226,9 +395,9 @@ export default function ProfilePage() {
                 <motion.section className="profile-metrics" variants={stagger} initial="hidden" animate="show">
                   {[
                     { label: 'Total listings', value: totalUserListings.toString(), hint: 'Across all cities', highlight: true },
-                    { label: 'Sold / closed', value: pipelineStats.sold.toString(), hint: 'Converted materials', highlight: false },
-                    { label: 'Active listings', value: pipelineStats.active.toString(), hint: 'Visible on marketplace', highlight: false },
-                    { label: 'Pending', value: pipelineStats.drafts.toString(), hint: 'Drafts & reviews', highlight: false },
+                    { label: 'Active', value: pipelineStats.active.toString(), hint: 'Visible on marketplace', highlight: false },
+                    { label: 'Reserved', value: pipelineStats.reserved.toString(), hint: 'Awaiting transaction', highlight: false },
+                    { label: 'Sold', value: pipelineStats.sold.toString(), hint: 'Converted materials', highlight: false },
                   ].map((m) => (
                     <MetricCard
                       key={m.label}
@@ -242,51 +411,70 @@ export default function ProfilePage() {
                 </motion.section>
 
                 <motion.div className="profile-grid-row profile-grid-row--2" variants={stagger} initial="hidden" animate="show">
+                  {/* Recent listings widget */}
                   <motion.section className="profile-widget" variants={fadeUp}>
                     <div className="profile-widget-head">
                       <h2 className="profile-widget-title">Recent listings</h2>
-                      <Link to="/marketplace" className="profile-widget-link">+ New</Link>
+                      <button
+                        type="button"
+                        className="profile-widget-link"
+                        onClick={() => setActiveView('listings')}
+                      >
+                        View all
+                      </button>
                     </div>
-                    <ul className="profile-mini-list">
-                      {recentListings.map((item) => (
-                        <li key={item.title} className="profile-mini-item">
-                          <span className={`profile-mini-dot ${item.tone}`} aria-hidden />
-                          <div>
-                            <div className="profile-mini-title">{item.title}</div>
-                            <div className="profile-mini-meta">{item.meta}</div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                    {listingsLoading ? (
+                      <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Loading…</p>
+                    ) : allItems.length === 0 ? (
+                      <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>No listings yet.</p>
+                    ) : (
+                      <ul className="profile-mini-list">
+                        {allItems.slice(0, 5).map((item) => (
+                          <li key={item.id} className="profile-mini-item">
+                            <span
+                              className={`profile-mini-dot ${item.status === 'SOLD' ? 'green' : item.status === 'INACTIVE' ? 'gray' : 'blue'}`}
+                              aria-hidden
+                            />
+                            <div>
+                              <div className="profile-mini-title">{item.name || item.title}</div>
+                              <div className="profile-mini-meta">
+                                {item.category} · {item.city} · {toDisplayStatus(item.status)}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </motion.section>
 
+                  {/* Pipeline widget */}
                   <motion.section className="profile-widget" variants={fadeUp}>
                     <div className="profile-widget-head">
                       <h2 className="profile-widget-title">Listing progress</h2>
                     </div>
                     <div className="pipeline-wrap">
                       <div className="pipeline-track">
-                        {(pipelineStats.drafts > 0 || pipelineStats.active > 0 || pipelineStats.sold > 0) ? (
+                        {(pipelineStats.active > 0 || pipelineStats.reserved > 0 || pipelineStats.sold > 0 || pipelineStats.paused > 0) ? (
                           <>
-                            {pipelineStats.drafts > 0 && <div className="pipeline-segment pipeline-segment--draft" title="Draft" style={{ flex: pipelineStats.drafts }} />}
                             {pipelineStats.active > 0 && <div className="pipeline-segment pipeline-segment--active" title="Active" style={{ flex: pipelineStats.active }} />}
+                            {pipelineStats.reserved > 0 && <div className="pipeline-segment pipeline-segment--draft" title="Reserved" style={{ flex: pipelineStats.reserved }} />}
+                            {pipelineStats.paused > 0 && <div className="pipeline-segment" title="Paused" style={{ flex: pipelineStats.paused, background: 'rgba(0,53,102,0.12)' }} />}
                             {pipelineStats.sold > 0 && <div className="pipeline-segment pipeline-segment--sold" title="Sold" style={{ flex: pipelineStats.sold }} />}
                           </>
                         ) : (
                           <div className="pipeline-segment" style={{ flex: 1, background: 'rgba(0, 53, 102, 0.05)' }} />
                         )}
                       </div>
-                      
                       <div className="pipeline-labels">
-                        <div className="pipeline-stats-item">
-                          <div className="pipeline-legend-dot pipeline-legend-dot--draft" />
-                          <span>Draft</span>
-                          <span className="pipeline-stats-val">{pipelineStats.drafts}</span>
-                        </div>
                         <div className="pipeline-stats-item">
                           <div className="pipeline-legend-dot pipeline-legend-dot--active" />
                           <span>Active</span>
                           <span className="pipeline-stats-val">{pipelineStats.active}</span>
+                        </div>
+                        <div className="pipeline-stats-item">
+                          <div className="pipeline-legend-dot pipeline-legend-dot--draft" />
+                          <span>Reserved</span>
+                          <span className="pipeline-stats-val">{pipelineStats.reserved}</span>
                         </div>
                         <div className="pipeline-stats-item">
                           <div className="pipeline-legend-dot pipeline-legend-dot--sold" />
@@ -297,13 +485,14 @@ export default function ProfilePage() {
                     </div>
                   </motion.section>
 
+                  {/* CO2 impact widget */}
                   <motion.section className="profile-widget profile-widget--dark" variants={fadeUp}>
                     <div className="profile-impact-label">CO₂ impact</div>
                     <div className="profile-impact-value">{pipelineStats.co2} kg</div>
                     <p className="profile-impact-sub">
-                      {pipelineStats.co2 > 0 
-                        ? "Estimated emissions avoided this month through reuse on RESTMATERIAL." 
-                        : "Start selling your surplus materials to build your CO₂ impact!"}
+                      {pipelineStats.co2 > 0
+                        ? 'Estimated emissions avoided through reuse on RESTMATERIAL.'
+                        : 'Start selling your surplus materials to build your CO₂ impact!'}
                     </p>
                     <div className="profile-impact-actions">
                       <Link to="/marketplace" className="profile-impact-btn">View marketplace</Link>
@@ -311,11 +500,14 @@ export default function ProfilePage() {
                   </motion.section>
                 </motion.div>
 
+                {/* Account card */}
                 <motion.section className="profile-account-card" variants={fadeUp} initial="hidden" animate="show">
                   <div className="profile-widget-head" style={{ marginBottom: '1rem' }}>
                     <h2 className="profile-widget-title">Account</h2>
                     {!isEditing && (
-                      <button type="button" className="profile-widget-link" onClick={() => setIsEditing(true)}>Edit Profile</button>
+                      <button type="button" className="profile-widget-link" onClick={() => setIsEditing(true)}>
+                        Edit profile
+                      </button>
                     )}
                   </div>
 
@@ -323,99 +515,209 @@ export default function ProfilePage() {
                     <form onSubmit={handleSaveProfile} className="profile-account-form">
                       <div className="profile-account-grid" style={{ marginBottom: '1rem' }}>
                         <label className="create-label" style={{ gridColumn: '1 / -1' }}>
-                          Full Name
-                          <input className="create-input" value={editForm.name} onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))} required />
+                          Full name
+                          <input
+                            className="create-input"
+                            value={editForm.name}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                            required
+                          />
                         </label>
                         <label className="create-label">
                           City
-                          <select className="create-input" value={editForm.city} onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))} required>
-                            <option value="" disabled>Select city</option>
+                          <select
+                            className="create-input"
+                            value={editForm.city}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))}
+                          >
+                            <option value="">Select city</option>
                             {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                           </select>
                         </label>
                         <label className="create-label">
-                          WhatsApp Number
-                          <input className="create-input" value={editForm.phone} onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))} required />
+                          WhatsApp number
+                          <input
+                            className="create-input"
+                            value={editForm.phone}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                            placeholder="+62 812 xxxx xxxx"
+                          />
                         </label>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button type="submit" className="profile-btn profile-btn--primary">Save Changes</button>
-                        <button type="button" className="profile-btn profile-btn--ghost" onClick={() => {
-                          setEditForm({ name: session.name || '', city: session.city || '', phone: session.phone || '' })
-                          setIsEditing(false)
-                        }}>Cancel</button>
+                        <button type="submit" className="profile-btn profile-btn--primary">Save changes</button>
+                        <button
+                          type="button"
+                          className="profile-btn profile-btn--ghost"
+                          onClick={() => {
+                            setEditForm({
+                              name: session.full_name || session.name || '',
+                              city: session.city || '',
+                              phone: session.phone || '',
+                            })
+                            setIsEditing(false)
+                          }}
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </form>
                   ) : (
                     <div className="profile-account-grid">
-                      <div><span className="profile-account-k">Name</span><div className="profile-account-v">{session.name}</div></div>
-                      <div><span className="profile-account-k">Email</span><div className="profile-account-v">{session.email}</div></div>
-                      <div><span className="profile-account-k">City</span><div className="profile-account-v">{session.city || '-'}</div></div>
-                      <div><span className="profile-account-k">WhatsApp</span><div className="profile-account-v">{session.phone || '-'}</div></div>
+                      <div>
+                        <span className="profile-account-k">Name</span>
+                        <div className="profile-account-v">{session.full_name || session.name || '-'}</div>
+                      </div>
+                      <div>
+                        <span className="profile-account-k">Email</span>
+                        <div className="profile-account-v">{session.email}</div>
+                      </div>
+                      <div>
+                        <span className="profile-account-k">City</span>
+                        <div className="profile-account-v">{session.city || '-'}</div>
+                      </div>
+                      <div>
+                        <span className="profile-account-k">WhatsApp</span>
+                        <div className="profile-account-v">{session.phone || '-'}</div>
+                      </div>
+                      <div>
+                        <span className="profile-account-k">Role</span>
+                        <div className="profile-account-v">{session.role || '-'}</div>
+                      </div>
                     </div>
                   )}
                 </motion.section>
               </motion.div>
-            ) : (
-              <motion.div key="listings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+            )}
+
+            {/* ══ MANAGE LISTINGS VIEW ════════════════════════════════════ */}
+            {activeView === 'listings' && (
+              <motion.div
+                key="listings"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
                 <div className="profile-page-head" style={{ marginBottom: '1rem' }}>
                   <div>
-                    <h1 className="profile-page-title">Manage Listings</h1>
-                    <p className="profile-page-sub">View and update the status of your materials.</p>
+                    <h1 className="profile-page-title">Manage listings</h1>
+                    <p className="profile-page-sub">Pause, re-activate, or delete your material listings.</p>
                   </div>
                   <div className="profile-page-actions">
-                    <button type="button" className="profile-btn profile-btn--ghost" onClick={() => setActiveView('overview')}>← Back to Dashboard</button>
+                    <Link to="/create-listing" className="profile-btn profile-btn--primary">+ New listing</Link>
+                    <button
+                      type="button"
+                      className="profile-btn profile-btn--ghost"
+                      onClick={() => setActiveView('overview')}
+                    >
+                      ← Back
+                    </button>
                   </div>
                 </div>
 
-                <div className="manage-list-grid">
-                  {[...(Array.isArray(draftListings) ? draftListings : [])].map(l => (
-                    <div className="manage-card" key={l.id}>
-                      <div className="manage-card-info">
-                        <div className="manage-card-title">{l.name}</div>
-                        <div className="manage-card-meta">{l.category} • {l.volume?.value} {l.volume?.unit}</div>
-                      </div>
-                      <div className="manage-card-actions">
-                        <span className={`manage-status ${l.status === 'Sold Out' ? 'manage-status--sold' : 'manage-status--draft'}`}>
-                          {l.status === 'Sold Out' ? 'Sold' : 'Draft'}
-                        </span>
-                        {l.status !== 'Sold Out' && (
-                          <button type="button" className="manage-card-btn" onClick={() => handleMarkAsSold(l.id)}>
-                            Mark as Sold
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {LISTINGS.filter(l => l.seller?.id === session.userId).map(l => {
-                    const isSold = l.status?.startsWith('Sold') || soldIds.includes(l.id)
-                    return (
-                      <div className="manage-card" key={l.id}>
-                        <div className="manage-card-info">
-                          <div className="manage-card-title">{l.name}</div>
-                          <div className="manage-card-meta">{l.category} • {l.volume?.value} {l.volume?.unit}</div>
-                        </div>
-                        <div className="manage-card-actions">
-                          <span className={`manage-status ${isSold ? 'manage-status--sold' : 'manage-status--active'}`}>
-                            {isSold ? 'Sold' : 'Active'}
-                          </span>
-                          {!isSold && (
-                            <button type="button" className="manage-card-btn" onClick={() => handleMarkAsSold(l.id)}>
-                              Mark as Sold
-                            </button>
+                {listingsLoading ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                    Loading listings…
+                  </div>
+                ) : allItems.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                    You haven't posted any materials yet.{' '}
+                    <Link to="/create-listing" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                      Create your first listing
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="manage-list-grid">
+                    {allItems.map(l => {
+                      const beStatus = l.status
+                      const displayStatus = toDisplayStatus(beStatus)
+                      const statusClass = toStatusClass(beStatus)
+                      const isPending = !!pendingActions[l.id]
+                      const isSold = beStatus === 'SOLD'
+                      const isInactive = beStatus === 'INACTIVE'
+                      const isAvailable = beStatus === 'AVAILABLE'
+                      // Draft = listing dari localStorage (id starts with 'listing-')
+                      const isDraft = typeof l.id === 'string' && l.id.startsWith('listing-')
+
+                      return (
+                        <div className="manage-card" key={l.id} style={{ opacity: isPending ? 0.6 : 1 }}>
+                          {/* Thumbnail foto kalau ada */}
+                          {l.primaryPhoto && (
+                            <div style={{
+                              width: '60px',
+                              height: '60px',
+                              borderRadius: '6px',
+                              overflow: 'hidden',
+                              flexShrink: 0,
+                            }}>
+                              <img
+                                src={l.primaryPhoto}
+                                alt={l.name || l.title}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            </div>
                           )}
+
+                          <div className="manage-card-info" style={{ flex: 1, minWidth: 0 }}>
+                            <div className="manage-card-title">{l.name || l.title}</div>
+                            <div className="manage-card-meta">
+                              {l.category}
+                              {l.city ? ` · ${l.city}` : ''}
+                              {l.quantity ? ` · ${l.quantity} ${l.unit || 'kg'}` : ''}
+                            </div>
+                          </div>
+
+                          <div className="manage-card-actions">
+                            <span className={`manage-status ${statusClass}`}>
+                              {isPending ? (pendingActions[l.id] === 'deleting' ? 'Deleting…' : 'Updating…') : displayStatus}
+                            </span>
+
+                            {/* Pause button — hanya untuk listing AVAILABLE dari BE */}
+                            {isAvailable && !isDraft && (
+                              <button
+                                type="button"
+                                className="manage-card-btn"
+                                onClick={() => handlePauseListing(l.id)}
+                                disabled={isPending}
+                              >
+                                Pause
+                              </button>
+                            )}
+
+                            {/* Re-activate button — hanya untuk INACTIVE */}
+                            {isInactive && (
+                              <button
+                                type="button"
+                                className="manage-card-btn"
+                                onClick={() => handleActivateListing(l.id)}
+                                disabled={isPending}
+                              >
+                                Re-activate
+                              </button>
+                            )}
+
+                            {/* Delete button — semua listing kecuali SOLD (karena ada implikasi transaksi) */}
+                            {!isSold && (
+                              <button
+                                type="button"
+                                className="manage-card-btn"
+                                style={{ color: '#dc2626' }}
+                                onClick={() => handleDeleteListing(l.id, l.name || l.title)}
+                                disabled={isPending}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                  {(totalUserListings === 0) && (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                      You haven't posted any materials yet.
-                    </div>
-                  )}
-                </div>
+                      )
+                    })}
+                  </div>
+                )}
               </motion.div>
             )}
+
           </AnimatePresence>
         </div>
       </div>
