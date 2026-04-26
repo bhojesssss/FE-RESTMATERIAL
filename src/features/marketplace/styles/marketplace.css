@@ -767,6 +767,30 @@
   .listing-grid {
     grid-template-columns: 1fr;
   }
+
+  .filter-card {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem 1.25rem;
+    padding: 1rem;
+  }
+  
+  .filter-head {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+  
+  .filter-section {
+    padding: 0.5rem 0;
+    border-top: none;
+    border-bottom: 1px solid rgba(0, 53, 102, 0.04);
+  }
+  
+  .filter-reset-btn {
+    grid-column: 1 / -1;
+    margin-top: 0.5rem;
+    padding: 0.7rem 1rem;
+  }
 }
 
 @media (max-width: 425px) {
@@ -796,6 +820,35 @@
 
   .detail-gallery {
     height: 240px;
+  }
+
+  .filter-card {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.25rem 0.8rem;
+    padding: 0.8rem;
+  }
+
+  .filter-label {
+    margin-bottom: 0.4rem;
+    font-size: 0.65rem;
+  }
+
+  .filter-options {
+    gap: 0.35rem;
+  }
+
+  .check, .radio {
+    font-size: 0.78rem;
+    gap: 0.4rem;
+  }
+
+  .check input, .radio input {
+    width: 14px;
+    height: 14px;
+  }
+
+  .range-readout {
+    font-size: 0.75rem;
   }
 
   .detail-specs {
