@@ -152,7 +152,14 @@ export default function ListingDetailPage() {
                 <div className="trust-v">{listing.seller?.rating} / 5</div>
               </div>
 
-              <button type="button" className="auth-btn auth-btn-primary seller-cta" disabled={listing.status !== 'Available'}>
+              <button 
+                type="button" 
+                className="auth-btn auth-btn-primary seller-cta" 
+                disabled={listing.status !== 'Available'}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('open-chat', { detail: { sellerName: listing.seller?.name || 'Seller' } }))
+                }}
+              >
                 Contact Seller
               </button>
               <button type="button" className="auth-btn auth-btn-outline seller-cta">

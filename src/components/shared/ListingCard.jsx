@@ -13,6 +13,7 @@ function formatIdr(n) {
 
 export default function ListingCard({ listing, variants }) {
   return (
+    <Link to={`/marketplace/${listing.id}`}>
     <motion.article className="listing-card" variants={variants}>
       <div className="thumb">
         <div className={`status-badge ${listing.status === 'Available' ? 'status-ok' : 'status-sold'}`}>
@@ -46,5 +47,6 @@ export default function ListingCard({ listing, variants }) {
         {/* <Link className="card-cta" to={`/marketplace/${listing.id}`}>View Details</Link> */}
       </div>
     </motion.article>
+    </Link>
   )
 }

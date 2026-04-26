@@ -11,6 +11,7 @@ import MarketplacePage from './features/marketplace/MarketplacePage'
 import ListingDetailPage from './features/marketplace/ListingDetailPage'
 import AboutPage from './features/landing/AboutPage'
 import CreateListingPage from './features/dashboard/CreateListingPage'
+import ChatWidget from './components/common/ChatWidget'
 
 function AppRoutes() {
   const location = useLocation()
@@ -33,6 +34,7 @@ function AppRoutes() {
         </Routes>
       </AnimatePresence>
       {showFooter ? <Footer /> : null}
+      <ChatWidget />
     </>
   )
 }
