@@ -33,25 +33,28 @@ export async function request(endpoint, options = {}) {
     clearTimeout(id);
 
     if (response.status === 401) {
-      // Unauthorized, token expired or invalid
       localStorage.removeItem("rm_token");
-      localStorage.removeItem("rm_session_v1"); // Clean up old session
+      localStorage.removeItem("rm_session_v1");
       window.location.href = "/login";
       throw new Error("Unauthorized");
     }
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
+      // Try to parse error body from BE for better messages
+      let errMsg = `API Error: ${response.statusText}`;
+      try {
+        const errBody = await response.json();
+        errMsg = errBody.message || errMsg;
+      } catch {}
+      throw new Error(errMsg);
     }
 
-    // Sometimes DELETE or 204 No Content doesn't have JSON body
     if (response.status === 204) return null;
 
     return await response.json();
   } catch (error) {
     clearTimeout(id);
 
-    // Dispatch a custom event to show Toast Notification for Fallback Mode
     window.dispatchEvent(
       new CustomEvent("api-fallback", {
         detail: {
@@ -61,6 +64,61 @@ export async function request(endpoint, options = {}) {
     );
 
     console.warn(`[API Fallback] Request to ${endpoint} failed:`, error);
-    throw error; // Re-throw to be handled by the specific component fallback logic
+    throw error;
+  }
+}
+
+/**
+ * Upload files via multipart/form-data (untuk photo upload ke BE).
+ * Tidak set Content-Type — browser otomatis set boundary yang benar.
+ *
+ * @param {string} endpoint - e.g. '/listings/abc-123/photos'
+ * @param {File[]} files - array of File objects
+ * @param {string} fieldName - field name yang di-expect BE (default: 'photos')
+ * @returns {Promise<any>} JSON response
+ */
+export async function uploadFiles(endpoint, files, fieldName = "photos") {
+  const token = localStorage.getItem("rm_token");
+
+  const formData = new FormData();
+  files.forEach((file) => formData.append(fieldName, file));
+
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), 30000); // 30s timeout untuk upload
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: "POST",
+      headers: {
+        // Sengaja TIDAK set Content-Type — browser yang urus boundary-nya
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+      signal: controller.signal,
+    });
+
+    clearTimeout(id);
+
+    if (response.status === 401) {
+      localStorage.removeItem("rm_token");
+      localStorage.removeItem("rm_session_v1");
+      window.location.href = "/login";
+      throw new Error("Unauthorized");
+    }
+
+    if (!response.ok) {
+      let errMsg = `Upload Error: ${response.statusText}`;
+      try {
+        const errBody = await response.json();
+        errMsg = errBody.message || errMsg;
+      } catch {}
+      throw new Error(errMsg);
+    }
+
+    return await response.json();
+  } catch (error) {
+    clearTimeout(id);
+    console.warn(`[Upload Error] ${endpoint}:`, error);
+    throw error;
   }
 }

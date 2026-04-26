@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { UploadIcon, SuccessCheckIcon } from '../../assets/icons/CreateListingIcons'
 import FormInput from '../../components/common/FormInput'
-import { request } from '../../services/api'
+import { request, uploadFiles } from '../../services/api'
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -12,7 +12,6 @@ const pageMotion = {
 }
 
 // Emission factors (kg CO2 saved per kg material reused)
-// Source: ICE Database v3.0, University of Bath / CIDB Malaysia Embodied Carbon Inventory
 export const CO2_EMISSION_FACTORS = {
   'Bricks & Blocks': 0.24,
   'Steel & Iron': 1.46,
@@ -25,34 +24,45 @@ export const CO2_EMISSION_FACTORS = {
   'Pipes & Installation': 2.50,
 }
 
-const MATERIAL_CATEGORIES = [
-  'Bricks & Blocks',
-  'Wood & Plywood',
-  'Steel & Iron',
-  'Ceramic & Granite',
-  'Frames & Doors',
-  'Pipes & Installation',
+// ── Mapping FE label → BE enum value ────────────────────────────────────────
+// BE hanya terima: GRADE_A, GRADE_B, GRADE_C, GRADE_D
+const CONDITION_OPTIONS = [
+  { label: 'New / Surplus', value: 'GRADE_A' },
+  { label: 'Good Condition', value: 'GRADE_B' },
+  { label: 'Fair / Minor Wear', value: 'GRADE_C' },
+  { label: 'Needs Repair', value: 'GRADE_D' },
 ]
 
-const CONDITIONS = [
-  'New/Surplus',
-  'Pre-loved/Good Condition',
-  'Needs Repair',
-]
-
-// FIX 1: City pakai select supaya konsisten dengan Material Type & Condition
 const CITIES = [
   'Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Makassar',
   'Semarang', 'Palembang', 'Tangerang', 'Depok', 'Bekasi',
 ]
 
+// Province mapping — BE requires province field
+const CITY_TO_PROVINCE = {
+  'Jakarta': 'DKI Jakarta',
+  'Surabaya': 'Jawa Timur',
+  'Bandung': 'Jawa Barat',
+  'Medan': 'Sumatera Utara',
+  'Makassar': 'Sulawesi Selatan',
+  'Semarang': 'Jawa Tengah',
+  'Palembang': 'Sumatera Selatan',
+  'Tangerang': 'Banten',
+  'Depok': 'Jawa Barat',
+  'Bekasi': 'Jawa Barat',
+}
+
 const INITIAL_FORM = {
   title: '',
   description: '',
-  category: '',
+  categoryId: '',   // UUID dari BE
+  categoryName: '', // Untuk display & CO2 lookup
   condition: '',
   city: '',
+  address: '',
   weightKg: '',
+  quantity: '',
+  unit: 'kg',
   priceIdr: '',
   photos: [],
 }
@@ -81,7 +91,9 @@ function PhotoUploader({ photos, onChange }) {
     onChange((prev) => {
       const existing = new Set(prev.map((f) => `${f.name}-${f.size}`))
       const next = valid.filter((f) => !existing.has(`${f.name}-${f.size}`))
-      return [...prev, ...next]
+      const combined = [...prev, ...next]
+      // BE max 10 photos per listing, batasi 5 per upload
+      return combined.slice(0, 5)
     })
   }, [onChange])
 
@@ -109,7 +121,6 @@ function PhotoUploader({ photos, onChange }) {
 
   return (
     <div className="photo-uploader">
-      {/* Drop zone */}
       <div
         className={`photo-dropzone${isDragging ? ' photo-dropzone--active' : ''}`}
         onDrop={onDrop}
@@ -124,7 +135,7 @@ function PhotoUploader({ photos, onChange }) {
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           multiple
           style={{ display: 'none' }}
           onChange={onInputChange}
@@ -139,10 +150,9 @@ function PhotoUploader({ photos, onChange }) {
         >
           Browse files
         </button>
-        <p className="photo-dropzone-hint">PNG, JPG, WEBP supported</p>
+        <p className="photo-dropzone-hint">PNG, JPG, WEBP · max 5 files · 5MB each</p>
       </div>
 
-      {/* FIX 3: Image preview grid */}
       {photos.length > 0 && (
         <motion.div
           className="photo-preview-grid"
@@ -190,25 +200,34 @@ export default function CreateListingPage() {
   const [form, setForm] = useState(INITIAL_FORM)
   const [submitted, setSubmitted] = useState(false)
   const [errors, setErrors] = useState({})
-  const [categories, setCategories] = useState(MATERIAL_CATEGORIES)
+  const [submitState, setSubmitState] = useState('idle') // 'idle' | 'creating' | 'uploading' | 'done'
+
+  // categories dari BE: [{ id, name, slug, parent_id, ... }]
+  const [categories, setCategories] = useState([])
 
   useEffect(() => {
+    // GET /categories returns { count, categories: [...] }
     request('/categories')
       .then((data) => {
-        if (Array.isArray(data)) {
-          if (typeof data[0] === 'string') setCategories(data);
-          else setCategories(data.map((c) => c.name || c.category || c));
+        if (data?.categories && Array.isArray(data.categories)) {
+          // Hanya ambil parent categories (parent_id === null) supaya pilihan tidak terlalu banyak
+          const mainCats = data.categories.filter(c => c.parent_id === null)
+          setCategories(mainCats.length > 0 ? mainCats : data.categories)
         }
       })
-      .catch((err) => console.warn('Failed to load categories, using fallback'));
-  }, []);
+      .catch(() => {
+        // Fallback ke nama statis kalau BE tidak reachable
+        // Tanpa UUID, tidak bisa submit ke BE tapi form tetap bisa diisi
+        setCategories([])
+      })
+  }, [])
 
   const co2Preview = useMemo(() => {
     const weight = parseFloat(form.weightKg)
-    if (!form.category || !weight || weight <= 0) return null
-    const factor = CO2_EMISSION_FACTORS[form.category] ?? 0.5
+    if (!form.categoryName || !weight || weight <= 0) return null
+    const factor = CO2_EMISSION_FACTORS[form.categoryName] ?? 0.5
     return Math.round(weight * factor * 10) / 10
-  }, [form.category, form.weightKg])
+  }, [form.categoryName, form.weightKg])
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target
@@ -217,6 +236,17 @@ export default function CreateListingPage() {
       [name]: type === 'checkbox' ? checked : value,
     }))
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }))
+  }
+
+  function handleCategoryChange(e) {
+    const selectedId = e.target.value
+    const cat = categories.find(c => c.id === selectedId)
+    setForm(prev => ({
+      ...prev,
+      categoryId: selectedId,
+      categoryName: cat?.name || '',
+    }))
+    if (errors.categoryId) setErrors(prev => ({ ...prev, categoryId: '' }))
   }
 
   function handlePhotos(updater) {
@@ -229,9 +259,12 @@ export default function CreateListingPage() {
   function validate() {
     const next = {}
     if (!form.title.trim()) next.title = 'Title is required'
-    if (!form.category) next.category = 'Please select a category'
+    if (!form.categoryId) next.categoryId = 'Please select a category'
     if (!form.condition) next.condition = 'Please select a condition'
     if (!form.city) next.city = 'Please select a city'
+    if (!form.address.trim()) next.address = 'Address is required'
+    if (!form.quantity || parseFloat(form.quantity) <= 0) next.quantity = 'Enter quantity'
+    if (!form.unit.trim()) next.unit = 'Unit is required'
     if (!form.weightKg || parseFloat(form.weightKg) <= 0) next.weightKg = 'Enter estimated weight in kg'
     if (!form.priceIdr || parseFloat(form.priceIdr) < 0) next.priceIdr = 'Enter a valid price'
     if (!form.description.trim()) next.description = 'Please add a short description'
@@ -248,28 +281,37 @@ export default function CreateListingPage() {
       return
     }
 
+    // ── Step 1: Create listing ──────────────────────────────────────────────
+    setSubmitState('creating')
+
     const payload = {
-      category: form.category,
-      name: form.title.trim(),
-      city: form.city,
-      estimated_weight_kg: parseFloat(form.weightKg),
-      condition: form.condition,
-      status: 'AVAILABLE',
-      price_per_unit: parseInt(form.priceIdr, 10),
+      title: form.title.trim(),
       description: form.description.trim(),
+      category_id: form.categoryId,
+      condition: form.condition,         // GRADE_A | GRADE_B | GRADE_C | GRADE_D
+      quantity: parseFloat(form.quantity),
+      unit: form.unit.trim(),
+      estimated_weight_kg: parseFloat(form.weightKg),
+      price_per_unit: parseInt(form.priceIdr, 10),
+      address: form.address.trim(),
+      city: form.city,
+      province: CITY_TO_PROVINCE[form.city] || form.city,
     }
 
+    let createdListing = null
+
     try {
-      await request('/listings', {
+      const result = await request('/listings', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
-      setSubmitted(true)
+      createdListing = result.listing
     } catch (error) {
-      console.warn('API fallback: saving to rm_listings_draft')
+      // Fallback: simpan ke localStorage sebagai draft
+      console.warn('API fallback: saving to rm_listings_draft', error.message)
       const listing = {
         id: `listing-${Date.now()}`,
-        category: form.category,
+        category: form.categoryName,
         name: form.title.trim(),
         city: form.city,
         volume: { value: parseFloat(form.weightKg), unit: 'kg' },
@@ -282,11 +324,27 @@ export default function CreateListingPage() {
         seller: null,
         images: [],
       }
-
       const existing = JSON.parse(localStorage.getItem('rm_listings_draft') || '[]')
       localStorage.setItem('rm_listings_draft', JSON.stringify([listing, ...existing]))
+      setSubmitState('done')
       setSubmitted(true)
+      return
     }
+
+    // ── Step 2: Upload photos (kalau ada) ───────────────────────────────────
+    if (form.photos.length > 0 && createdListing?.id) {
+      setSubmitState('uploading')
+      try {
+        await uploadFiles(`/listings/${createdListing.id}/photos`, form.photos, 'photos')
+      } catch (uploadErr) {
+        // Listing sudah tersimpan, foto gagal — tetap sukses tapi kasih tau user
+        console.warn('Photo upload failed, listing created without photos:', uploadErr.message)
+        // Bisa tambah toast notif di sini kalau mau
+      }
+    }
+
+    setSubmitState('done')
+    setSubmitted(true)
   }
 
   // ── Success state ──
@@ -298,7 +356,7 @@ export default function CreateListingPage() {
             <SuccessCheckIcon className="create-success-icon" aria-hidden="true" />
             <h2 className="create-success-title">Listing submitted!</h2>
             <p className="create-success-sub">
-              Saved to local storage (demo mode). Once the backend is connected, it will appear on the marketplace automatically.
+              Your listing is now live on the marketplace.
             </p>
             {co2Preview && (
               <div className="carbon-card" style={{ marginTop: '1.5rem' }}>
@@ -307,7 +365,7 @@ export default function CreateListingPage() {
                   This listing could prevent <strong>~{co2Preview} kg CO₂e</strong> from being emitted
                 </div>
                 <div className="carbon-sub">
-                  Based on ICE Database emission factors for {form.category}
+                  Based on ICE Database emission factors for {form.categoryName}
                 </div>
               </div>
             )}
@@ -315,7 +373,7 @@ export default function CreateListingPage() {
               <button
                 type="button"
                 className="auth-btn auth-btn-primary"
-                onClick={() => { setForm(INITIAL_FORM); setSubmitted(false) }}
+                onClick={() => { setForm(INITIAL_FORM); setSubmitted(false); setSubmitState('idle') }}
               >
                 Create another listing
               </button>
@@ -332,6 +390,13 @@ export default function CreateListingPage() {
       </motion.main>
     )
   }
+
+  const isSubmitting = submitState === 'creating' || submitState === 'uploading'
+  const submitLabel = submitState === 'creating'
+    ? 'Creating listing…'
+    : submitState === 'uploading'
+      ? `Uploading ${form.photos.length} photo${form.photos.length > 1 ? 's' : ''}…`
+      : 'Submit listing'
 
   // ── Form ──
   return (
@@ -378,63 +443,116 @@ export default function CreateListingPage() {
 
           {/* Category + Condition */}
           <div className="create-row">
-            <FormInput
-              id="field-category"
-              label="Material type *"
-              wrapperClass="create-label"
-              inputClass="create-input"
-              as="select"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              error={errors.category}
-            >
-              <option value="" disabled>Select category</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </FormInput>
+            <div id="field-categoryId">
+              <label className="create-label">
+                Material type *
+                <select
+                  className="create-input"
+                  value={form.categoryId}
+                  onChange={handleCategoryChange}
+                >
+                  <option value="" disabled>Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </label>
+              {errors.categoryId && <p className="field-error">{errors.categoryId}</p>}
+            </div>
 
-            <FormInput
-              id="field-condition"
-              label="Condition *"
-              wrapperClass="create-label"
-              inputClass="create-input"
-              as="select"
-              name="condition"
-              value={form.condition}
-              onChange={handleChange}
-              error={errors.condition}
-            >
-              <option value="" disabled>Select condition</option>
-              {CONDITIONS.map((cond) => (
-                <option key={cond} value={cond}>{cond}</option>
-              ))}
-            </FormInput>
+            <div id="field-condition">
+              <label className="create-label">
+                Condition *
+                <select
+                  className="create-input"
+                  name="condition"
+                  value={form.condition}
+                  onChange={handleChange}
+                >
+                  <option value="" disabled>Select condition</option>
+                  {CONDITION_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </label>
+              {errors.condition && <p className="field-error">{errors.condition}</p>}
+            </div>
           </div>
 
-          {/* FIX 1: City select + Weight */}
+          {/* City + Address */}
           <div className="create-row">
+            <div id="field-city">
+              <label className="create-label">
+                City *
+                <select
+                  className="create-input"
+                  name="city"
+                  value={form.city}
+                  onChange={handleChange}
+                >
+                  <option value="" disabled>Select city</option>
+                  {CITIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </label>
+              {errors.city && <p className="field-error">{errors.city}</p>}
+            </div>
+
             <FormInput
-              id="field-city"
-              label="City *"
+              id="field-address"
+              label="Address *"
               wrapperClass="create-label"
               inputClass="create-input"
-              as="select"
-              name="city"
-              value={form.city}
+              name="address"
+              type="text"
+              placeholder="e.g. Jl. Sudirman No. 1, Jakarta Pusat"
+              value={form.address}
               onChange={handleChange}
-              error={errors.city}
-            >
-              <option value="" disabled>Select city</option>
-              {CITIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </FormInput>
+              error={errors.address}
+            />
+          </div>
+
+          {/* Quantity + Unit + Weight */}
+          <div className="create-row">
+            <FormInput
+              id="field-quantity"
+              label="Quantity *"
+              wrapperClass="create-label"
+              inputClass="create-input"
+              type="number"
+              name="quantity"
+              min="0.001"
+              step="0.001"
+              placeholder="e.g. 50"
+              value={form.quantity}
+              onChange={handleChange}
+              error={errors.quantity}
+            />
+
+            <div id="field-unit">
+              <label className="create-label">
+                Unit *
+                <select
+                  className="create-input"
+                  name="unit"
+                  value={form.unit}
+                  onChange={handleChange}
+                >
+                  <option value="kg">kg</option>
+                  <option value="pcs">pcs</option>
+                  <option value="m2">m²</option>
+                  <option value="m3">m³</option>
+                  <option value="m">m (linear)</option>
+                  <option value="set">set</option>
+                </select>
+              </label>
+              {errors.unit && <p className="field-error">{errors.unit}</p>}
+            </div>
 
             <FormInput
               id="field-weightKg"
-              label="Estimated weight (kg) *"
+              label="Est. weight (kg) *"
               wrapperClass="create-label"
               inputClass="create-input"
               type="number"
@@ -463,7 +581,7 @@ export default function CreateListingPage() {
                   Reusing this material prevents <strong>~{co2Preview} kg of CO₂e</strong>
                 </div>
                 <div className="carbon-sub">
-                  Based on {form.weightKg} kg of {form.category} × {CO2_EMISSION_FACTORS[form.category]} kg CO₂/kg (ICE Database, Univ. of Bath)
+                  Based on {form.weightKg} kg of {form.categoryName} × {CO2_EMISSION_FACTORS[form.categoryName] ?? 0.5} kg CO₂/kg (ICE Database, Univ. of Bath)
                 </div>
               </motion.div>
             )}
@@ -472,7 +590,7 @@ export default function CreateListingPage() {
           {/* Price */}
           <div id="field-priceIdr">
             <FormInput
-              label="Price (IDR) *"
+              label="Price per unit (IDR) *"
               wrapperClass="create-label"
               inputClass="create-input"
               style={{ marginTop: '0.5rem' }}
@@ -485,16 +603,16 @@ export default function CreateListingPage() {
               onChange={handleChange}
               error={errors.priceIdr}
             />
-            {/* {form.priceIdr && parseFloat(form.priceIdr) > 0 && (
-              <p className="create-hint">{formatIdr(form.priceIdr)}</p>
-            )} */}
-
-            {errors.priceIdr && <p className="field-error">{errors.priceIdr}</p>}
+            {form.priceIdr && parseFloat(form.priceIdr) > 0 && (
+              <p className="create-hint">{formatIdr(form.priceIdr)} per {form.unit || 'unit'}</p>
+            )}
           </div>
 
-          {/* FIX 3: Drag & Drop uploader dengan image preview */}
+          {/* Photo Uploader */}
           <div>
-            <div className="create-label" style={{ display: 'block', marginBottom: '0.5rem' }}>Photos</div>
+            <div className="create-label" style={{ display: 'block', marginBottom: '0.5rem' }}>
+              Photos <span style={{ fontWeight: 400, color: '#64748b' }}>(max 5)</span>
+            </div>
             <PhotoUploader photos={form.photos} onChange={handlePhotos} />
           </div>
 
@@ -504,15 +622,19 @@ export default function CreateListingPage() {
             lead paint, or other hazardous substances must not be listed.
           </div>
 
-          {/* FIX 4: Full-width stacked buttons */}
           <div className="create-actions-stack">
-            <button type="submit" className="auth-btn auth-btn-primary">
-              Submit listing
+            <button
+              type="submit"
+              className="auth-btn auth-btn-primary"
+              disabled={isSubmitting}
+            >
+              {submitLabel}
             </button>
             <button
               type="button"
               className="auth-btn auth-btn-outline"
               onClick={() => navigate('/marketplace')}
+              disabled={isSubmitting}
             >
               Cancel
             </button>

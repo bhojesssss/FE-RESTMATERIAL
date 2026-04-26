@@ -28,10 +28,11 @@ export async function getSession() {
 
   try {
     // Coba ambil profile dari BE (butuh token valid)
-    const profile = await request("/auth/me");
+    const data = await request("/auth/me");
     const session = {
-      ...profile,
-      userId: profile.id,
+      ...data.profile, // spread dari nested profile
+      userId: data.profile.id,
+      email: data.user.email,
       loggedInAt: new Date().toISOString(),
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));

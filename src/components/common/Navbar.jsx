@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { getSession } from '../../features/auth/auth'
+import { getSession, getCachedSession } from '../../features/auth/auth'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const session = getSession()
+  // const session = getSession()
+  const [session, setSession] = useState(null)
 
-  void motion
+  useEffect(() => {
+    const cached = getCachedSession()
+    if (cached) setSession(cached)
+
+    getSession().then(setSession).catch(() => { })
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
