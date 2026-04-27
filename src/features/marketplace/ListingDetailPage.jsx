@@ -182,11 +182,11 @@ export default function ListingDetailPage() {
             <div className="seller-card">
               <div className="seller-top">
                 <div className="seller-avatar" aria-hidden="true">
-                  <span>{String(listing.seller?.name || 'S').slice(0, 1).toUpperCase()}</span>
+                  <span>{String(listing.seller?.full_name || listing.seller?.name || 'S').slice(0, 1).toUpperCase()}</span>
                 </div>
                 <div>
-                  <div className="seller-name">{listing.seller?.name}</div>
-                  <div className="seller-meta">{listing.seller?.city} • Member Since {String(listing.seller?.memberSince).slice(0, 7)}</div>
+                  <div className="seller-name">{listing.seller?.full_name || listing.seller?.name}</div>
+                  <div className="seller-meta">{listing.seller?.city} • Member Since {String(listing.seller?.created_at || listing.seller?.memberSince || '').slice(0, 7)}</div>
                 </div>
               </div>
 
@@ -195,12 +195,17 @@ export default function ListingDetailPage() {
                 <div className="trust-v">{listing.seller?.rating} / 5</div>
               </div>
 
-              <button 
-                type="button" 
-                className="auth-btn auth-btn-primary seller-cta" 
+              <button
+                type="button"
+                className="auth-btn auth-btn-primary seller-cta"
                 disabled={listing.status !== 'Available'}
                 onClick={() => {
-                  window.dispatchEvent(new CustomEvent('open-chat', { detail: { sellerName: listing.seller?.name || 'Seller' } }))
+                  window.dispatchEvent(new CustomEvent('open-chat', {
+                    detail: {
+                      listingId: listing.id,
+                      sellerName: listing.seller?.full_name || listing.seller?.name || 'Seller',
+                    }
+                  }))
                 }}
               >
                 Contact Seller

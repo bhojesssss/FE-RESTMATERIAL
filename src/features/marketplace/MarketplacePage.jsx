@@ -59,16 +59,18 @@ export default function MarketplacePage() {
     }
 
     request(`/listings?${query.toString()}`)
-      .then(data => {
-        if (!Array.isArray(data)) return
+      .then(res => {
+        const data = Array.isArray(res?.data) ? res.data : []
         const mapped = data.map(item => ({
           ...item,
+          name: item.title,  // BE pakai 'title', bukan 'name'
           priceIdr: item.price_per_unit ?? item.priceIdr,
           weightKg: item.estimated_weight_kg ?? item.weightKg,
-          status: item.status === 'AVAILABLE' ? 'Available' : (item.status === 'SOLD' ? 'Sold Out' : item.status),
-          volume: item.volume || { value: item.estimated_weight_kg, unit: 'kg' }
+          status: item.status === 'AVAILABLE' ? 'Available' : item.status === 'SOLD' ? 'Sold Out' : item.status,
+          volume: { value: item.estimated_weight_kg, unit: 'kg' },
+          category: item.category?.name || item.category || '',
         }))
-        setListingsData(mapped)
+        if (mapped.length > 0) setListingsData(mapped)
       })
       .catch(err => {
         console.warn('Fallback to local LISTINGS')

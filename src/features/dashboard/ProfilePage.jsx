@@ -173,10 +173,10 @@ export default function ProfilePage() {
     navigate('/', { replace: true })
   }
 
-  function handleSaveProfile(e) {
+  async function handleSaveProfile(e) {
     e.preventDefault()
     try {
-      const nextSession = updateUser(session.userId, editForm)
+      const nextSession = await updateUser(session.userId, editForm)
       if (nextSession) setSession(nextSession)
       setIsEditing(false)
     } catch (err) {

@@ -27,13 +27,29 @@ export async function getSession() {
   if (!token) return getCachedSession();
 
   try {
-    // Coba ambil profile dari BE (butuh token valid)
-    const data = await request("/auth/me");
+    // GET /users/me → { profile: { id, full_name, phone, bio, ... } }
+    const data = await request("/users/me");
+    const p = data.profile;
+
+    // Ambil email dari cached session (karena /users/me tidak return email)
+    const cached = getCachedSession();
+
     const session = {
-      ...data.profile, // spread dari nested profile
-      userId: data.profile.id,
-      email: data.user.email,
-      loggedInAt: new Date().toISOString(),
+      userId: p.id,
+      id: p.id,
+      full_name: p.full_name,
+      name: p.full_name, // backward compat
+      email: cached?.email || p.email || "",
+      phone: p.phone || "",
+      bio: p.bio || "",
+      address: p.address || "",
+      city: p.city || "",
+      province: p.province || "",
+      role: p.role || "BUYER",
+      avatar_url: p.avatar_url || "",
+      rating_avg: p.rating_avg || 0,
+      total_reviews: p.total_reviews || 0,
+      loggedInAt: cached?.loggedInAt || new Date().toISOString(),
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
@@ -78,6 +94,7 @@ export async function register({ name, email, password }) {
   const session = {
     userId: data.user.id,
     id: data.user.id,
+    full_name: name,
     name,
     email: data.user.email,
     loggedInAt: new Date().toISOString(),
@@ -111,6 +128,7 @@ export async function login({ email, password }) {
   const session = {
     userId: data.user.id,
     id: data.user.id,
+    full_name: data.user.user_metadata?.name || email,
     name: data.user.user_metadata?.name || email,
     email: data.user.email,
     loggedInAt: new Date().toISOString(),
@@ -119,20 +137,57 @@ export async function login({ email, password }) {
   return session;
 }
 
-// ─── Update Profile (local fallback, BE endpoint belum ada) ─────────────────
+// ─── Update Profile (PATCH /users/me) ───────────────────────────────────────
 
-export function updateUser(userId, data) {
+export async function updateUser(userId, formData) {
   const session = getCachedSession();
   if (!session || session.userId !== userId) {
     throw new Error("User not found");
   }
 
-  const nextSession = {
-    ...session,
-    name: data.name !== undefined ? String(data.name).trim() : session.name,
-    city: data.city !== undefined ? String(data.city).trim() : session.city,
-    phone: data.phone !== undefined ? String(data.phone).trim() : session.phone,
-  };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
-  return nextSession;
+  // Build payload sesuai BE: full_name, phone, bio, address, city, province, role
+  const payload = {};
+  if (formData.name !== undefined) payload.full_name = String(formData.name).trim();
+  if (formData.city !== undefined) payload.city = String(formData.city).trim();
+  if (formData.phone !== undefined) payload.phone = String(formData.phone).trim();
+  if (formData.bio !== undefined) payload.bio = String(formData.bio).trim();
+  if (formData.address !== undefined) payload.address = String(formData.address).trim();
+  if (formData.province !== undefined) payload.province = String(formData.province).trim();
+  if (formData.role !== undefined) payload.role = formData.role;
+
+  try {
+    // Panggil BE
+    const data = await request("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+
+    const p = data.profile;
+    const nextSession = {
+      ...session,
+      full_name: p.full_name || session.full_name,
+      name: p.full_name || session.name,
+      phone: p.phone ?? session.phone,
+      bio: p.bio ?? session.bio,
+      address: p.address ?? session.address,
+      city: p.city ?? session.city,
+      province: p.province ?? session.province,
+      role: p.role ?? session.role,
+      avatar_url: p.avatar_url ?? session.avatar_url,
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+    return nextSession;
+  } catch (err) {
+    // Fallback: update local saja kalau BE unreachable
+    console.warn("[updateUser] BE unreachable, fallback ke local:", err.message);
+    const nextSession = {
+      ...session,
+      full_name: formData.name !== undefined ? String(formData.name).trim() : session.full_name,
+      name: formData.name !== undefined ? String(formData.name).trim() : session.name,
+      city: formData.city !== undefined ? String(formData.city).trim() : session.city,
+      phone: formData.phone !== undefined ? String(formData.phone).trim() : session.phone,
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+    return nextSession;
+  }
 }

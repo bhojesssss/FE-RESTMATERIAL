@@ -19,9 +19,10 @@ export async function request(endpoint, options = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  // Set default timeout to 5000ms for quick fallback
+  // Set default timeout to 10s (chat queries can be heavier)
+  const timeoutMs = options.timeout || 10000;
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 5000);
+  const id = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -55,13 +56,16 @@ export async function request(endpoint, options = {}) {
   } catch (error) {
     clearTimeout(id);
 
-    window.dispatchEvent(
-      new CustomEvent("api-fallback", {
-        detail: {
-          message: "Switching to Offline Demo Mode. Backend is unreachable.",
-        },
-      }),
-    );
+    // Only fire api-fallback toast if NOT a silent request (e.g. polling)
+    if (!options.silent) {
+      window.dispatchEvent(
+        new CustomEvent("api-fallback", {
+          detail: {
+            message: "Switching to Offline Demo Mode. Backend is unreachable.",
+          },
+        }),
+      );
+    }
 
     console.warn(`[API Fallback] Request to ${endpoint} failed:`, error);
     throw error;
