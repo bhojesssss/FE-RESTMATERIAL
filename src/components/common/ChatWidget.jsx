@@ -1,31 +1,95 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { getSession } from '../../features/auth/auth'
 import './styles/chat.css'
+import { getCachedSession } from '../../features/auth/auth'
+import * as convApi from '../../services/conversationApi'
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
-  const session = getSession()
-  
+  const [conversations, setConversations] = useState([])
   const [activeChatId, setActiveChatId] = useState(null)
-  const [conversations, setConversations] = useState([
-    {
-      id: 'support-1',
-      partnerName: 'Live Support',
-      messages: [
-        { id: 1, text: "Hello! How can we help you today?", sender: "received" }
-      ]
-    }
-  ])
-  
+  const [messages, setMessages] = useState([])
   const [inputValue, setInputValue] = useState('')
+  const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef(null)
-  const conversationsRef = useRef(conversations)
+  const session = getCachedSession() 
 
+  // ─── Load conversation list waktu widget dibuka ───
   useEffect(() => {
-    conversationsRef.current = conversations
-  }, [conversations])
+    if (isOpen && session) {
+      loadConversations()
+    }
+  }, [isOpen])
+
+  const loadConversations = async () => {
+    try {
+      const data = await convApi.getMyConversations()
+      setConversations(data.conversations)
+    } catch (err) {
+      console.error('gagal load conversations:', err)
+    }
+  }
+
+  // ─── Load messages + mark as read waktu buka 1 chat ───
+  useEffect(() => {
+    if (activeChatId) {
+      loadMessages(activeChatId)
+      convApi.markAsRead(activeChatId).catch(console.error)
+    }
+  }, [activeChatId])
+
+  const loadMessages = async (convId) => {
+    setLoading(true)
+    try {
+      const data = await convApi.getMessages(convId)
+      // BE return newest-first, jadi reverse biar oldest di atas
+      setMessages([...data.messages].reverse())
+    } catch (err) {
+      console.error('gagal load messages:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ─── Handler event open-chat dari listing card ───
+  useEffect(() => {
+    const handleOpenChat = async (e) => {
+      setIsOpen(true)
+      if (e.detail?.listingId && e.detail?.firstMessage) {
+        try {
+          // startConversation auto-resume kalo udah ada
+          const data = await convApi.startConversation(
+            e.detail.listingId,
+            e.detail.firstMessage
+          )
+          setActiveChatId(data.conversation.id)
+          await loadConversations()  // refresh list
+        } catch (err) {
+          console.error('gagal start conversation:', err)
+        }
+      }
+    }
+    window.addEventListener('open-chat', handleOpenChat)
+    return () => window.removeEventListener('open-chat', handleOpenChat)
+  }, [])
+
+  // ─── Send message ───
+  const handleSendMessage = async (e) => {
+    e.preventDefault()
+    if (!inputValue.trim() || !activeChatId) return
+
+    const content = inputValue
+    setInputValue('')
+
+    try {
+      const data = await convApi.sendMessage(activeChatId, content)
+      setMessages(prev => [...prev, data.data])  // append message baru
+    } catch (err) {
+      console.error('gagal kirim message:', err)
+      setInputValue(content)  // kembaliin input kalo gagal
+    }
+  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -67,41 +131,6 @@ export default function ChatWidget() {
       scrollToBottom()
     }
   }, [activeConversation?.messages, isOpen, activeChatId])
-
-  const handleSendMessage = (e) => {
-    e.preventDefault()
-    if (!inputValue.trim() || !activeChatId) return
-
-    const newUserMessage = {
-      id: Date.now(),
-      text: inputValue,
-      sender: "sent"
-    }
-    
-    setConversations(prev => prev.map(c => {
-      if (c.id === activeChatId) {
-        return { ...c, messages: [...c.messages, newUserMessage] }
-      }
-      return c
-    }))
-    setInputValue('')
-
-    const currentChatId = activeChatId
-
-    // Simulate auto-reply
-    setTimeout(() => {
-      setConversations(prev => prev.map(c => {
-        if (c.id === currentChatId) {
-          return { ...c, messages: [...c.messages, {
-            id: Date.now(),
-            text: "Thanks for your message! Our team will get back to you shortly.",
-            sender: "received"
-          }]}
-        }
-        return c
-      }))
-    }, 1000)
-  }
 
   return (
     <div className="chat-widget-container">
