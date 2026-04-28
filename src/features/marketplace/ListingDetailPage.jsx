@@ -24,15 +24,13 @@ function formatIdr(n) {
   }
 }
 
-// BE returns GRADE_A/B/C/D → display label + CSS class
+// Mapping FE label → BE enum value
 function mapCondition(condition) {
   switch (condition) {
-    case 'GRADE_A': return { label: 'New / Surplus', cls: 'cond-new' }
-    case 'GRADE_B': return { label: 'Pre-loved / Good', cls: 'cond-pre' }
-    case 'GRADE_C': return { label: 'Fair / Minor Wear', cls: 'cond-pre' }
-    case 'GRADE_D': return { label: 'Needs Repair', cls: 'cond-repair' }
+    case 'NEW_SURPLUS': return { label: 'New / Surplus', cls: 'cond-new' }
+    case 'PRELOVED': return { label: 'Pre-loved', cls: 'cond-pre' }
+    case 'NEEDS_REPAIR': return { label: 'Needs Repair', cls: 'cond-repair' }
     default:
-      // Fallback: data lokal masih pakai string lama
       if (typeof condition === 'string') {
         if (condition.startsWith('New')) return { label: 'New', cls: 'cond-new' }
         if (condition.startsWith('Pre-loved')) return { label: 'Pre-loved', cls: 'cond-pre' }
