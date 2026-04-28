@@ -25,12 +25,10 @@ export const CO2_EMISSION_FACTORS = {
 }
 
 // ── Mapping FE label → BE enum value ────────────────────────────────────────
-// BE hanya terima: GRADE_A, GRADE_B, GRADE_C, GRADE_D
 const CONDITION_OPTIONS = [
-  { label: 'New / Surplus', value: 'GRADE_A' },
-  { label: 'Good Condition', value: 'GRADE_B' },
-  { label: 'Fair / Minor Wear', value: 'GRADE_C' },
-  { label: 'Needs Repair', value: 'GRADE_D' },
+  { label: 'New / Surplus', value: 'NEW_SURPLUS' },
+  { label: 'Pre-loved', value: 'PRELOVED' },
+  { label: 'Needs Repair', value: 'NEEDS_REPAIR' },
 ]
 
 const CITIES = [
@@ -288,7 +286,7 @@ export default function CreateListingPage() {
       title: form.title.trim(),
       description: form.description.trim(),
       category_id: form.categoryId,
-      condition: form.condition,         // GRADE_A | GRADE_B | GRADE_C | GRADE_D
+      condition: form.condition,
       quantity: parseFloat(form.quantity),
       unit: form.unit.trim(),
       estimated_weight_kg: parseFloat(form.weightKg),
