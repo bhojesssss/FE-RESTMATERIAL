@@ -28,7 +28,7 @@ export default function LoginPage() {
     setError('')
     try {
       await login({ email, password })  // FIX: tambah await
-      navigate('/profile')
+      navigate('/')
     } catch (err) {
       setError(err?.message || 'Login gagal. Coba lagi.')
     } finally {
