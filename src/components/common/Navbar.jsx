@@ -1,19 +1,28 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { getSession, getCachedSession } from '../../features/auth/auth'
+import { getCachedSession } from '../../features/auth/auth'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  // const session = getSession()
-  const [session, setSession] = useState(null)
+  const [session, setSession] = useState(() => getCachedSession())
 
   useEffect(() => {
-    const cached = getCachedSession()
-    if (cached) setSession(cached)
+    function syncSession() {
+      setSession(getCachedSession())
+    }
 
-    getSession().then(setSession).catch(() => { })
+    // 'storage' event fire saat localStorage berubah — termasuk dari LoginPage
+    window.addEventListener('storage', syncSession)
+
+    // Custom event untuk same-tab updates (storage event tidak fire di tab yang sama)
+    window.addEventListener('rm:auth:changed', syncSession)
+
+    return () => {
+      window.removeEventListener('storage', syncSession)
+      window.removeEventListener('rm:auth:changed', syncSession)
+    }
   }, [])
 
   useEffect(() => {
@@ -22,7 +31,6 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Lock body scroll when mobile menu is open
   useEffect(() => {
     if (menuOpen) {
       document.body.style.overflow = 'hidden'
@@ -44,13 +52,11 @@ export default function Navbar() {
         <div>REST<span>MATERIAL</span></div>
       </Link>
 
-      {/* Desktop nav links */}
       <ul className="nav-links" style={{ marginRight: '2rem' }}>
         <li><Link to="/marketplace">Marketplace</Link></li>
         <li><Link to="/about">About Us</Link></li>
       </ul>
 
-      {/* Desktop auth buttons */}
       <div className="nav-links" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {session ? (
           <Link to="/profile" className="nav-profile-icon" aria-label="Profile" title="Profile">
@@ -67,7 +73,6 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* Burger / X toggle button */}
       <button
         onClick={() => setMenuOpen(!menuOpen)}
         aria-label={menuOpen ? 'Close menu' : 'Open menu'}
@@ -88,7 +93,6 @@ export default function Navbar() {
         )}
       </button>
 
-      {/* Backdrop overlay — clicking it closes the menu */}
       <button
         className={`mobile-menu-overlay${menuOpen ? ' mobile-menu-overlay--visible' : ''}`}
         onClick={() => setMenuOpen(false)}
@@ -96,7 +100,6 @@ export default function Navbar() {
         tabIndex={-1}
       />
 
-      {/* Slide-in mobile panel */}
       <div
         className={`mobile-menu-panel${menuOpen ? ' mobile-menu-panel--open' : ''}`}
         aria-hidden={!menuOpen}

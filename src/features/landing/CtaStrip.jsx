@@ -1,10 +1,42 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useInView } from '../../hooks/useInView'
-import { getSession } from '../auth/auth'
+import { getCachedSession, updateUser } from '../auth/auth'
+import RoleUpgradeModal from '../../components/shared/RoleUpgradeModal'
 
 export default function CtaStrip() {
   const [ref, inView] = useInView({ threshold: 0.3 })
+  const [showModal, setShowModal] = useState(false)
+  const navigate = useNavigate()
+
+  // FIX: session tidak pernah dideklarasikan sebelumnya — ini yang bikin crash
+  const [session, setSession] = useState(() => getCachedSession())
+
+  const handleSellClick = (e) => {
+    e.preventDefault()
+    if (!session) {
+      navigate('/login')
+      return
+    }
+    if (session.role === 'BUYER') {
+      setShowModal(true)
+    } else {
+      navigate('/create-listing')
+    }
+  }
+
+  const confirmUpgrade = async () => {
+    try {
+      const nextSession = await updateUser(session.userId, { role: 'BOTH' })
+      setSession(nextSession) // FIX: update state supaya role langsung reflect
+      setShowModal(false)
+      navigate('/create-listing')
+    } catch (err) {
+      alert('Gagal mengupgrade akun: ' + err.message)
+    }
+  }
+
   void motion
 
   return (
@@ -25,9 +57,9 @@ export default function CtaStrip() {
           animate={inView ? { opacity: 1, x: 0 } : {}}
           transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Link to={getSession() ? "/create-listing" : "/login"} className="btn-hero btn-hero-primary">
+          <a href="/create-listing" onClick={handleSellClick} className="btn-hero btn-hero-primary">
             Start Selling Free
-          </Link>
+          </a>
           <Link
             to="/marketplace"
             className="btn-hero"
@@ -40,6 +72,12 @@ export default function CtaStrip() {
             Browse Listings
           </Link>
         </motion.div>
+
+        <RoleUpgradeModal
+          isOpen={showModal}
+          onConfirm={confirmUpgrade}
+          onCancel={() => setShowModal(false)}
+        />
       </div>
     </section>
   )
