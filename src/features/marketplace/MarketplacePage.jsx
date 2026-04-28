@@ -1,29 +1,49 @@
+// src/features/marketplace/MarketplacePage.jsx
 import { useRef, useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { CITIES, CONDITIONS, LISTINGS, MATERIAL_CATEGORIES } from '../../data/marketplace'
 import { EmptySearchIcon } from '../../assets/icons/MarketplaceIcons'
-import ListingCard from '../../components/shared/ListingCard'
+import ListingCard, { ListingCardSkeleton } from '../../components/shared/ListingCard'
 import { request } from '../../services/api'
+
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
   exit: { opacity: 0, y: -12, transition: { duration: 0.25 } },
 }
-
 const gridVariants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.06 } },
 }
-
 const cardVariants = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 }
 
+// BE condition enum → label yang dipakai di filter sidebar
+const CONDITION_MAP = {
+  'GRADE_A': 'New/Surplus',
+  'GRADE_B': 'Pre-loved/Good Condition',
+  'GRADE_C': 'Fair/Minor Wear',
+  'GRADE_D': 'Needs Repair',
+}
+
+// Sebaliknya: label filter → BE enum value (untuk query param)
+const CONDITION_TO_ENUM = {
+  'New/Surplus': 'GRADE_A',
+  'Pre-loved/Good Condition': 'GRADE_B',
+  'Fair/Minor Wear': 'GRADE_C',
+  'Needs Repair': 'GRADE_D',
+}
+
 function formatIdr(n) {
   try {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0,
+    }).format(n)
   } catch {
     return `IDR ${n}`
   }
@@ -31,6 +51,23 @@ function formatIdr(n) {
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n))
+}
+
+// ── Skeleton grid saat loading ───────────────────────────────────────────────
+const SKELETON_COUNT = 8
+function SkeletonGrid() {
+  return (
+    <motion.div
+      className="listing-grid"
+      variants={gridVariants}
+      initial="hidden"
+      animate="show"
+    >
+      {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+        <ListingCardSkeleton key={i} variants={cardVariants} />
+      ))}
+    </motion.div>
+  )
 }
 
 export default function MarketplacePage() {
@@ -49,54 +86,96 @@ export default function MarketplacePage() {
   const sortRef = useRef(null)
   const cityRef = useRef(null)
 
-  const [listingsData, setListingsData] = useState(LISTINGS)
+  // null = belum ada data dari BE (pakai fallback lokal), array = dari BE
+  const [listingsData, setListingsData] = useState(null)
+  const [loading, setLoading] = useState(true)
 
+  // ── Fetch dari BE setiap filter berubah ──────────────────────────────────
   useEffect(() => {
+    setLoading(true)
+
     const query = new URLSearchParams()
+
+    // City — BE support ilike filter via ?city=
     if (selectedCities.length) query.append('city', selectedCities[0])
-    if (selectedCategories.length) {
-      selectedCategories.forEach(c => query.append('category', c))
+
+    // Category — BE butuh category_slug (bukan name string)
+    // MATERIAL_CATEGORIES berisi nama display, tapi BE filter pakai category_slug
+    // Untuk sekarang: skip category filter ke BE, lakukan client-side saja
+    // (karena kita tidak punya slug mapping di FE tanpa fetch categories dulu)
+
+    // Condition — BE butuh GRADE_A/B/C/D
+    if (selectedConditions.length === 1) {
+      const enumVal = CONDITION_TO_ENUM[selectedConditions[0]]
+      if (enumVal) query.append('condition', enumVal)
     }
+
+    // Price range
+    if (priceMin > 0) query.append('min_price', priceMin)
+    if (priceMax < 10_000_000) query.append('max_price', priceMax)
+
+    // Sort — BE support: newest, oldest, price_asc, price_desc
+    const sortMap = {
+      'Newest': 'newest',
+      'Lowest Price': 'price_asc',
+      'Highest Price': 'price_desc',
+      'Oldest': 'oldest',
+    }
+    const beSort = sortMap[sortBy]
+    if (beSort) query.append('sort', beSort)
 
     request(`/listings?${query.toString()}`)
       .then(res => {
-        const data = Array.isArray(res?.data) ? res.data : []
-        const mapped = data.map(item => ({
-          ...item,
-          name: item.title,  // BE pakai 'title', bukan 'name'
-          priceIdr: item.price_per_unit ?? item.priceIdr,
-          weightKg: item.estimated_weight_kg ?? item.weightKg,
-          status: item.status === 'AVAILABLE' ? 'Available' : item.status === 'SOLD' ? 'Sold Out' : item.status,
-          volume: { value: item.estimated_weight_kg, unit: 'kg' },
-          category: item.category?.name || item.category || '',
-        }))
-        if (mapped.length > 0) setListingsData(mapped)
+        // BE returns { data: [...], pagination: {...} }
+        const raw = Array.isArray(res?.data) ? res.data : []
+        setListingsData(raw)
       })
-      .catch(err => {
-        console.warn('Fallback to local LISTINGS')
-        setListingsData(LISTINGS)
+      .catch(() => {
+        console.warn('[MarketplacePage] BE unreachable — fallback to local LISTINGS')
+        setListingsData(null) // null = pakai fallback lokal
       })
-  }, [selectedCities, selectedCategories])
+      .finally(() => setLoading(false))
+  }, [selectedCities, selectedConditions, priceMin, priceMax, sortBy])
 
+  // ── Sumber data: BE atau fallback lokal ──────────────────────────────────
+  const sourceData = listingsData ?? LISTINGS
+
+  // ── Client-side filtering (untuk hal yang belum dikirim ke BE) ──────────
   const filtered = useMemo(() => {
-    let items = [...listingsData]
+    let items = [...sourceData]
 
-    if (selectedCities.length) items = items.filter((l) => selectedCities.includes(l.city))
-    if (selectedCategories.length) items = items.filter((l) => selectedCategories.includes(l.category))
-    if (selectedConditions.length) items = items.filter((l) => selectedConditions.includes(l.condition))
-    if (status !== 'All') items = items.filter((l) => (status === 'Available' ? l.status === 'Available' : l.status === 'Sold Out'))
+    // Category filter client-side (karena kita pakai nama display, bukan slug)
+    if (selectedCategories.length) {
+      items = items.filter(l => {
+        // Dari BE: l.category = { name, slug } | dari lokal: l.category = string
+        const catName = l.category?.name || l.category || ''
+        return selectedCategories.includes(catName)
+      })
+    }
 
-    items = items.filter((l) => l.priceIdr >= priceMin && l.priceIdr <= priceMax)
+    // Status filter
+    if (status !== 'All') {
+      items = items.filter(l => {
+        const s = l.status
+        const isAvail = s === 'AVAILABLE' || s === 'Available'
+        return status === 'Available' ? isAvail : !isAvail
+      })
+    }
 
-    if (sortBy === 'Newest') items.sort((a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt)))
-    if (sortBy === 'Lowest Price') items.sort((a, b) => a.priceIdr - b.priceIdr)
-    if (sortBy === 'Highest Volume') items.sort((a, b) => (b.volume?.value || 0) - (a.volume?.value || 0))
+    // Sort client-side (untuk "Highest Volume" yang tidak ada di BE)
+    if (sortBy === 'Highest Volume') {
+      items.sort((a, b) => {
+        const va = a.estimated_weight_kg ?? a.volume?.value ?? 0
+        const vb = b.estimated_weight_kg ?? b.volume?.value ?? 0
+        return vb - va
+      })
+    }
 
     return items
-  }, [priceMax, priceMin, selectedCategories, selectedCities, selectedConditions, sortBy, status, listingsData])
+  }, [sourceData, selectedCategories, status, sortBy])
 
   function toggleInList(value, list, setList) {
-    setList((prev) => (prev.includes(value) ? prev.filter((x) => x !== value) : [...prev, value]))
+    setList(prev => prev.includes(value) ? prev.filter(x => x !== value) : [...prev, value])
   }
 
   function resetFilters() {
@@ -116,7 +195,9 @@ export default function MarketplacePage() {
           <div>
             <span className="section-tag">Marketplace</span>
             <h1 className="market-title">Browse Materials</h1>
-            <p className="market-sub">Filter by city, type, condition, and price — then view details to contact the seller.</p>
+            <p className="market-sub">
+              Filter by city, type, condition, and price — then view details to contact the seller.
+            </p>
           </div>
 
           <div className="market-head-right">
@@ -126,7 +207,7 @@ export default function MarketplacePage() {
                 className="dd-root"
                 ref={sortRef}
                 tabIndex={-1}
-                onBlur={(e) => { if (!sortRef.current?.contains(e.relatedTarget)) setSortOpen(false) }}
+                onBlur={e => { if (!sortRef.current?.contains(e.relatedTarget)) setSortOpen(false) }}
               >
                 <button
                   type="button"
@@ -143,7 +224,7 @@ export default function MarketplacePage() {
                 </button>
                 {sortOpen && (
                   <div className="market-dropdown-menu" style={{ width: '160px' }} role="listbox">
-                    {['Newest', 'Lowest Price', 'Highest Volume'].map(opt => (
+                    {['Newest', 'Lowest Price', 'Highest Price', 'Highest Volume'].map(opt => (
                       <button
                         type="button"
                         key={opt}
@@ -163,13 +244,14 @@ export default function MarketplacePage() {
         </header>
 
         <div className="market-layout">
-          {/* Left Sidebar */}
+          {/* ── Left Sidebar ── */}
           <aside className="filter-card">
             <div className="filter-head">
               <div className="filter-title">Filters</div>
               <button type="button" className="filter-reset-link" onClick={resetFilters}>Reset</button>
             </div>
 
+            {/* City */}
             <div className="filter-section">
               <div className="filter-label">City</div>
               <div className="filter-options">
@@ -178,7 +260,7 @@ export default function MarketplacePage() {
                   ref={cityRef}
                   tabIndex={-1}
                   style={{ width: '100%' }}
-                  onBlur={(e) => { if (!cityRef.current?.contains(e.relatedTarget)) { setCityOpen(false) } }}
+                  onBlur={e => { if (!cityRef.current?.contains(e.relatedTarget)) setCityOpen(false) }}
                 >
                   <button
                     type="button"
@@ -203,7 +285,7 @@ export default function MarketplacePage() {
                           placeholder="Search city..."
                           value={citySearch}
                           autoFocus
-                          onChange={(e) => setCitySearch(e.target.value)}
+                          onChange={e => setCitySearch(e.target.value)}
                           className="market-search-input"
                         />
                       </div>
@@ -216,7 +298,7 @@ export default function MarketplacePage() {
                       >
                         All Cities
                       </button>
-                      {CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase())).map((c) => (
+                      {CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase())).map(c => (
                         <button
                           type="button"
                           key={c}
@@ -234,10 +316,11 @@ export default function MarketplacePage() {
               </div>
             </div>
 
+            {/* Material Type */}
             <div className="filter-section">
               <div className="filter-label">Material Type</div>
               <div className="filter-options">
-                {MATERIAL_CATEGORIES.map((cat) => (
+                {MATERIAL_CATEGORIES.map(cat => (
                   <label key={cat} className="check">
                     <input
                       type="checkbox"
@@ -250,10 +333,11 @@ export default function MarketplacePage() {
               </div>
             </div>
 
+            {/* Condition */}
             <div className="filter-section">
               <div className="filter-label">Condition</div>
               <div className="filter-options">
-                {CONDITIONS.map((cond) => (
+                {CONDITIONS.map(cond => (
                   <label key={cond} className="check">
                     <input
                       type="checkbox"
@@ -266,13 +350,13 @@ export default function MarketplacePage() {
               </div>
             </div>
 
+            {/* Price Range */}
             <div className="filter-section">
               <div className="filter-label">Price Range</div>
               <div className="range-readout">
                 <span>{formatIdr(priceMin)}</span>
                 <span>{formatIdr(priceMax)}</span>
               </div>
-
               <div className="range-wrap">
                 <input
                   className="range"
@@ -281,10 +365,7 @@ export default function MarketplacePage() {
                   max={10_000_000}
                   step={50_000}
                   value={priceMin}
-                  onChange={(e) => {
-                    const v = clamp(Number(e.target.value), 0, priceMax)
-                    setPriceMin(v)
-                  }}
+                  onChange={e => setPriceMin(clamp(Number(e.target.value), 0, priceMax))}
                 />
                 <input
                   className="range"
@@ -293,34 +374,47 @@ export default function MarketplacePage() {
                   max={10_000_000}
                   step={50_000}
                   value={priceMax}
-                  onChange={(e) => {
-                    const v = clamp(Number(e.target.value), priceMin, 10_000_000)
-                    setPriceMax(v)
-                  }}
+                  onChange={e => setPriceMax(clamp(Number(e.target.value), priceMin, 10_000_000))}
                 />
               </div>
             </div>
 
+            {/* Status */}
             <div className="filter-section">
               <div className="filter-label">Status</div>
               <div className="filter-options">
-                {['All', 'Available', 'Sold Out'].map((s) => (
+                {['All', 'Available', 'Sold Out'].map(s => (
                   <label key={s} className="radio">
-                    <input type="radio" name="status" value={s} checked={status === s} onChange={() => setStatus(s)} />
+                    <input
+                      type="radio"
+                      name="status"
+                      value={s}
+                      checked={status === s}
+                      onChange={() => setStatus(s)}
+                    />
                     <span>{s}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <button type="button" className="filter-reset-btn" onClick={resetFilters}>Reset Filter</button>
+            <button type="button" className="filter-reset-btn" onClick={resetFilters}>
+              Reset Filter
+            </button>
           </aside>
 
-          {/* Right Grid */}
+          {/* ── Right Grid ── */}
           <section className="listing-wrap">
-            {filtered.length ? (
-              <motion.div className="listing-grid" variants={gridVariants} initial="hidden" animate="show">
-                {filtered.map((l) => (
+            {loading ? (
+              <SkeletonGrid />
+            ) : filtered.length ? (
+              <motion.div
+                className="listing-grid"
+                variants={gridVariants}
+                initial="hidden"
+                animate="show"
+              >
+                {filtered.map(l => (
                   <ListingCard key={l.id} listing={l} variants={cardVariants} />
                 ))}
               </motion.div>
@@ -331,7 +425,9 @@ export default function MarketplacePage() {
                 </div>
                 <div className="empty-title">No matching materials found</div>
                 <div className="empty-sub">Try changing filters or reset to the default view.</div>
-                <button type="button" className="filter-reset-btn" onClick={resetFilters}>Reset Filters</button>
+                <button type="button" className="filter-reset-btn" onClick={resetFilters}>
+                  Reset Filters
+                </button>
               </div>
             )}
           </section>
