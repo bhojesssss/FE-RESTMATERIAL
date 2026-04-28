@@ -124,6 +124,7 @@ export default function ProfilePage() {
   const [apiListings, setApiListings] = useState(null);
   const [listingsLoading, setListingsLoading] = useState(false);
   const [pendingActions, setPendingActions] = useState({});
+  const [deletingPhotoId, setDeletingPhotoId] = useState(null);
 
   const [draftListings, setDraftListings] = useState(() => {
     try {
@@ -170,6 +171,7 @@ export default function ProfilePage() {
             categoryId: item.category?.id || item.category_id || "",
             priceIdr: item.price_per_unit,
             weightKg: item.estimated_weight_kg,
+            photos: item.photos || [],
             primaryPhoto:
               item.photos?.find((p) => p.is_primary)?.url ||
               item.photos?.[0]?.url ||
@@ -454,6 +456,38 @@ export default function ProfilePage() {
       alert(`Gagal menyimpan perubahan: ${err.message}`);
     } finally {
       setSavingEdit(false);
+    }
+  }
+
+  function parsePhotoId(url) {
+    if (!url) return null;
+    const parts = url.split("/");
+    const filename = parts[parts.length - 1];
+    return filename.replace(/\.[^/.]+$/, "");
+  }
+
+  async function handleDeletePhoto(listingId, photoId) {
+    setDeletingPhotoId(photoId);
+    try {
+      await request(`/listings/${listingId}/photos/${photoId}`, {
+        method: "DELETE",
+      });
+      setApiListings((prev) =>
+        prev.map((item) =>
+          item.id === listingId
+            ? {
+                ...item,
+                photos: item.photos.filter(
+                  (p) => parsePhotoId(p.url) !== photoId,
+                ),
+              }
+            : item,
+        ),
+      );
+    } catch (err) {
+      alert(`Gagal hapus foto: ${err.message}`);
+    } finally {
+      setDeletingPhotoId(null);
     }
   }
 
@@ -1218,6 +1252,152 @@ export default function ProfilePage() {
                                   >
                                     Edit listing
                                   </div>
+
+                                  {/* ── Foto existing ── */}
+                                  {(() => {
+                                    const currentListing = apiListings?.find(
+                                      (item) => item.id === editingListingId,
+                                    );
+                                    const photos = currentListing?.photos || [];
+                                    if (photos.length === 0) return null;
+
+                                    return (
+                                      <div>
+                                        <div
+                                          style={{
+                                            fontSize: "0.72rem",
+                                            fontWeight: 900,
+                                            letterSpacing: "0.1em",
+                                            textTransform: "uppercase",
+                                            color: "rgba(0,29,61,0.45)",
+                                            marginBottom: "0.6rem",
+                                          }}
+                                        >
+                                          Foto saat ini
+                                        </div>
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            gap: "0.6rem",
+                                            flexWrap: "wrap",
+                                          }}
+                                        >
+                                          {photos.map((photo) => {
+                                            // console.log(
+                                            //   "photo object:",
+                                            //   JSON.stringify(photo),
+                                            // );
+                                            return (
+                                              <div
+                                                key={parsePhotoId(photo.url)}
+                                                style={{
+                                                  position: "relative",
+                                                  width: 72,
+                                                  height: 72,
+                                                  borderRadius: 8,
+                                                  overflow: "hidden",
+                                                  border: photo.is_primary
+                                                    ? "2px solid #003566"
+                                                    : "1px solid #e2e8f0",
+                                                  flexShrink: 0,
+                                                }}
+                                              >
+                                                <img
+                                                  src={photo.url}
+                                                  alt=""
+                                                  style={{
+                                                    width: "100%",
+                                                    height: "100%",
+                                                    objectFit: "cover",
+                                                    display: "block",
+                                                  }}
+                                                />
+
+                                                {/* Primary badge */}
+                                                {photo.is_primary && (
+                                                  <div
+                                                    style={{
+                                                      position: "absolute",
+                                                      bottom: 0,
+                                                      left: 0,
+                                                      right: 0,
+                                                      background:
+                                                        "rgba(0,53,102,0.75)",
+                                                      color: "white",
+                                                      fontSize: "0.6rem",
+                                                      fontWeight: 700,
+                                                      textAlign: "center",
+                                                      padding: "2px 0",
+                                                      letterSpacing: "0.05em",
+                                                    }}
+                                                  >
+                                                    MAIN
+                                                  </div>
+                                                )}
+
+                                                {/* Tombol hapus */}
+                                                <button
+                                                  type="button"
+                                                  onClick={() =>
+                                                    handleDeletePhoto(
+                                                      editingListingId,
+                                                      parsePhotoId(photo.url),
+                                                    )
+                                                  }
+                                                  disabled={
+                                                    deletingPhotoId ===
+                                                    parsePhotoId(photo.url)
+                                                  }
+                                                  style={{
+                                                    position: "absolute",
+                                                    top: 3,
+                                                    right: 3,
+                                                    width: 20,
+                                                    height: 20,
+                                                    background:
+                                                      deletingPhotoId ===
+                                                      parsePhotoId(photo.url)
+                                                        ? "rgba(0,0,0,0.4)"
+                                                        : "rgba(0,0,0,0.65)",
+                                                    color: "white",
+                                                    border: "none",
+                                                    borderRadius: "50%",
+                                                    fontSize: "0.9rem",
+                                                    lineHeight: 1,
+                                                    cursor: "pointer",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    padding: 0,
+                                                    transition:
+                                                      "background 0.15s",
+                                                  }}
+                                                  aria-label="Hapus foto"
+                                                >
+                                                  {deletingPhotoId ===
+                                                  parsePhotoId(photo.url)
+                                                    ? "…"
+                                                    : "×"}
+                                                </button>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                        {photos.length === 1 && (
+                                          <p
+                                            style={{
+                                              fontSize: "0.75rem",
+                                              color: "#f59e0b",
+                                              marginTop: "0.4rem",
+                                            }}
+                                          >
+                                            ⚠ Ini foto terakhir. Hapus akan
+                                            membuat listing tanpa foto.
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* Title */}
                                   <label className="create-label">
