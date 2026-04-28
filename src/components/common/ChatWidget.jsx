@@ -5,6 +5,110 @@ import "./styles/chat.css";
 import { getCachedSession } from "../../features/auth/auth";
 import * as convApi from "../../services/conversationApi";
 
+// ─── Read Receipt ─────────────────────────────────────────────────────────────
+// Muncul di sudut kanan bawah bubble pesan yang kita kirim (sent).
+// 4 state: pending (jam) → sent (✓ abu) → read (✓✓ hijau) → error (✕ merah)
+function ReadReceipt({ readAt, pending, error }) {
+  if (error) {
+    return (
+      <span
+        style={{ display: "inline-flex", alignItems: "center", marginLeft: 4 }}
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <line
+            x1="2"
+            y1="2"
+            x2="10"
+            y2="10"
+            stroke="#ef4444"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <line
+            x1="10"
+            y1="2"
+            x2="2"
+            y2="10"
+            stroke="#ef4444"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </svg>
+      </span>
+    );
+  }
+  if (pending) {
+    return (
+      <span
+        style={{ display: "inline-flex", alignItems: "center", marginLeft: 4 }}
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <circle cx="6" cy="6" r="4.5" stroke="#94a3b8" strokeWidth="1.4" />
+          <line
+            x1="6"
+            y1="3"
+            x2="6"
+            y2="6.2"
+            stroke="#94a3b8"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+          <line
+            x1="6"
+            y1="6.2"
+            x2="7.8"
+            y2="7.8"
+            stroke="#94a3b8"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        </svg>
+      </span>
+    );
+  }
+  if (readAt) {
+    // ✓✓ hijau — sudah dibaca
+    return (
+      <span
+        style={{ display: "inline-flex", alignItems: "center", marginLeft: 4 }}
+      >
+        <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+          <polyline
+            points="1,5 3.5,8 7.5,2"
+            stroke="#388E3C"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <polyline
+            points="5,5 7.5,8 13.5,2"
+            stroke="#388E3C"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    );
+  }
+  // ✓ abu — terkirim, belum dibaca
+  return (
+    <span
+      style={{ display: "inline-flex", alignItems: "center", marginLeft: 4 }}
+    >
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+        <polyline
+          points="1,5 3.5,8 9,2"
+          stroke="#94a3b8"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeChatId, setActiveChatId] = useState(null);
@@ -18,21 +122,17 @@ export default function ChatWidget() {
   const [error, setError] = useState(null);
 
   const messagesEndRef = useRef(null);
-  // ─── Ref buat baca conversations di dalam event handler tanpa jadi dep ───
   const conversationsRef = useRef([]);
   const session = getCachedSession();
 
-  // Sync ref tiap kali state berubah
   useEffect(() => {
     conversationsRef.current = conversations;
   }, [conversations]);
 
-  // ─── Auto scroll ───
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ─── Load inbox waktu widget dibuka (dan belum ada active chat) ───
   useEffect(() => {
     if (!isOpen || !session || activeChatId) return;
     fetchConversations();
@@ -50,7 +150,6 @@ export default function ChatWidget() {
     }
   };
 
-  // ─── Load messages dari 1 conversation ───
   const openConversation = async (convId, meta) => {
     setActiveChatId(convId);
     setActiveConvMeta(meta);
@@ -69,7 +168,6 @@ export default function ChatWidget() {
     }
   };
 
-  // ─── Handler event 'open-chat' — TIDAK ada conversations di dependency ───
   useEffect(() => {
     const handleOpenChat = async (e) => {
       const { listingId, sellerName, firstMessage } = e.detail || {};
@@ -77,34 +175,28 @@ export default function ChatWidget() {
       setIsOpen(true);
       setError(null);
 
-      // Kalo gak ada listingId, cukup buka widget ke inbox
       if (!listingId) return;
 
-      // Baca conversations lewat ref — TIDAK trigger re-render / re-register
       let freshConvs = conversationsRef.current;
 
-      // Fetch fresh kalo inbox masih kosong
       if (freshConvs.length === 0) {
         try {
           const data = await convApi.getMyConversations();
           freshConvs = data.conversations || [];
           setConversations(freshConvs);
         } catch {
-          // Lanjut dengan data yang ada
+          /* lanjut */
         }
       }
 
-      // Cek apakah sudah ada conversation untuk listing ini
       const existing = freshConvs.find((c) => c.listing?.id === listingId);
 
       if (existing) {
-        // Flow B: sudah pernah chat → load history
         await openConversation(existing.id, {
           sellerName: existing.other_user?.full_name || sellerName || "Seller",
           listingTitle: existing.listing?.title || "",
         });
       } else {
-        // Flow A: belum pernah chat → buat baru
         if (!firstMessage) return;
         setLoadingStart(true);
         try {
@@ -114,7 +206,6 @@ export default function ChatWidget() {
             sellerName: sellerName || conv.listing_title,
             listingTitle: conv.listing_title,
           });
-          // Refresh inbox biar conversation baru muncul
           fetchConversations();
         } catch (err) {
           setError(err.message || "Gagal memulai chat");
@@ -126,9 +217,8 @@ export default function ChatWidget() {
 
     window.addEventListener("open-chat", handleOpenChat);
     return () => window.removeEventListener("open-chat", handleOpenChat);
-  }, []); // ← kosong, tidak ada dependency → listener hanya didaftarkan sekali
+  }, []); // eslint-disable-line
 
-  // ─── Kirim message ───
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputValue.trim() || !activeChatId) return;
@@ -141,6 +231,7 @@ export default function ChatWidget() {
       content,
       sender_id: session?.id,
       created_at: new Date().toISOString(),
+      read_at: null,
       _pending: true,
     };
     setMessages((prev) => [...prev, tempMsg]);
@@ -313,8 +404,7 @@ export default function ChatWidget() {
                   Login Now
                 </Link>
               </div>
-            ) : /* ══ Loading: contact seller ══ */
-            loadingStart ? (
+            ) : loadingStart ? (
               <div
                 className="chat-widget-body"
                 style={{
@@ -340,8 +430,7 @@ export default function ChatWidget() {
                   Membuka chat...
                 </p>
               </div>
-            ) : /* ══ Error global (bukan di dalam chat) ══ */
-            error && !activeChatId ? (
+            ) : error && !activeChatId ? (
               <div
                 className="chat-widget-body"
                 style={{
@@ -361,8 +450,7 @@ export default function ChatWidget() {
                   Coba Lagi
                 </button>
               </div>
-            ) : /* ══ Active chat view ══ */
-            activeChatId ? (
+            ) : activeChatId ? (
               <>
                 {activeConvMeta?.listingTitle && (
                   <div
@@ -413,37 +501,46 @@ export default function ChatWidget() {
                       Belum ada pesan.
                     </div>
                   ) : (
-                    messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`chat-message ${msg.sender_id === session?.id ? "sent" : "received"}`}
-                        style={{ opacity: msg._pending ? 0.6 : 1 }}
-                      >
-                        {msg.content}
-                        {msg._error && (
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              color: "#ef4444",
-                              marginLeft: "0.4rem",
-                            }}
-                          >
-                            ✕ Gagal
-                          </span>
-                        )}
-                        {msg._pending && (
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              color: "#94a3b8",
-                              marginLeft: "0.4rem",
-                            }}
-                          >
-                            •••
-                          </span>
-                        )}
-                      </div>
-                    ))
+                    // ─── MESSAGES — ditambahin ReadReceipt di sini ───
+                    messages.map((msg) => {
+                      const isSent = msg.sender_id === session?.id;
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`chat-message ${isSent ? "sent" : "received"}`}
+                          style={{ opacity: msg._pending ? 0.7 : 1 }}
+                        >
+                          {/* Teks pesan */}
+                          <span>{msg.content}</span>
+
+                          {/* Timestamp + read receipt — hanya di pesan yang kita kirim */}
+                          {isSent && (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "2px",
+                                marginLeft: "6px",
+                                fontSize: "0.68rem",
+                                color: "#94a3b8",
+                                verticalAlign: "middle",
+                                whiteSpace: "nowrap",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {!msg._pending && !msg._error && (
+                                <span>{formatTime(msg.created_at)}</span>
+                              )}
+                              <ReadReceipt
+                                readAt={msg.read_at}
+                                pending={msg._pending}
+                                error={msg._error}
+                              />
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                   <div ref={messagesEndRef} />
                 </div>
