@@ -1,23 +1,24 @@
-import './index.css'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
-import { AnimatePresence } from 'framer-motion'
-import Navbar from './components/common/Navbar'
-import Footer from './components/common/Footer'
-import Toast from './components/common/Toast'
-import LandingPage from './features/landing/LandingPage'
-import LoginPage from './features/auth/LoginPage'
-import RegisterPage from './features/auth/RegisterPage'
-import ProfilePage from './features/dashboard/ProfilePage'
-import MarketplacePage from './features/marketplace/MarketplacePage'
-import ListingDetailPage from './features/marketplace/ListingDetailPage'
-import AboutPage from './features/landing/AboutPage'
-import CreateListingPage from './features/dashboard/CreateListingPage'
-import ChatWidget from './components/common/ChatWidget'
+import "./index.css";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import Navbar from "./components/common/Navbar";
+import Footer from "./components/common/Footer";
+import Toast from "./components/common/Toast";
+import LandingPage from "./features/landing/LandingPage";
+import LoginPage from "./features/auth/LoginPage";
+import RegisterPage from "./features/auth/RegisterPage";
+import ProfilePage from "./features/dashboard/ProfilePage";
+import MarketplacePage from "./features/marketplace/MarketplacePage";
+import ListingDetailPage from "./features/marketplace/ListingDetailPage";
+import AboutPage from "./features/landing/AboutPage";
+import CreateListingPage from "./features/dashboard/CreateListingPage";
+import ChatWidget from "./components/common/ChatWidget";
 
 function AppRoutes() {
-  const location = useLocation()
+  const location = useLocation();
 
-  const showFooter = location.pathname === '/' || location.pathname === '/about'
+  const showFooter =
+    location.pathname === "/" || location.pathname === "/about";
 
   return (
     <>
@@ -36,9 +37,9 @@ function AppRoutes() {
       </AnimatePresence>
       {showFooter ? <Footer /> : null}
       <ChatWidget />
-      <Toast />
+      {/* <Toast /> */}
     </>
-  )
+  );
 }
 
 function App() {
@@ -46,7 +47,7 @@ function App() {
     <BrowserRouter>
       <AppRoutes />
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;
