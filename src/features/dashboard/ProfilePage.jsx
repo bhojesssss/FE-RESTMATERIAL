@@ -126,6 +126,10 @@ export default function ProfilePage() {
   const [pendingActions, setPendingActions] = useState({});
   const [deletingPhotoId, setDeletingPhotoId] = useState(null);
 
+  const [transactions, setTransactions] = useState([]);
+  const [txLoading, setTxLoading] = useState(false);
+  const [txRoleFilter, setTxRoleFilter] = useState("ALL"); // ALL, BUYER, SELLER
+
   const [draftListings, setDraftListings] = useState(() => {
     try {
       const draft = localStorage.getItem("rm_listings_draft");
@@ -194,7 +198,7 @@ export default function ProfilePage() {
           setCategories(mainCats.length > 0 ? mainCats : data.categories);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // ── Derived data ─────────────────────────────────────────────────────────
@@ -433,20 +437,20 @@ export default function ProfilePage() {
         prev.map((item) =>
           item.id === editingListingId
             ? {
-                ...item,
-                ...updated,
-                name: updated.title || listingEditForm.title,
-                category:
-                  categories.find((c) => c.id === listingEditForm.categoryId)
-                    ?.name || item.category,
-                categoryId: listingEditForm.categoryId,
-                priceIdr:
-                  updated.price_per_unit ??
-                  parseInt(listingEditForm.priceIdr, 10),
-                weightKg:
-                  updated.estimated_weight_kg ??
-                  parseFloat(listingEditForm.weightKg),
-              }
+              ...item,
+              ...updated,
+              name: updated.title || listingEditForm.title,
+              category:
+                categories.find((c) => c.id === listingEditForm.categoryId)
+                  ?.name || item.category,
+              categoryId: listingEditForm.categoryId,
+              priceIdr:
+                updated.price_per_unit ??
+                parseInt(listingEditForm.priceIdr, 10),
+              weightKg:
+                updated.estimated_weight_kg ??
+                parseFloat(listingEditForm.weightKg),
+            }
             : item,
         ),
       );
@@ -476,11 +480,11 @@ export default function ProfilePage() {
         prev.map((item) =>
           item.id === listingId
             ? {
-                ...item,
-                photos: item.photos.filter(
-                  (p) => parsePhotoId(p.url) !== photoId,
-                ),
-              }
+              ...item,
+              photos: item.photos.filter(
+                (p) => parsePhotoId(p.url) !== photoId,
+              ),
+            }
             : item,
         ),
       );
@@ -508,6 +512,19 @@ export default function ProfilePage() {
     );
   }
   if (!session) return null;
+
+  useEffect(() => {
+    if (activeView !== "orders" || !session) return;
+
+    setTxLoading(true);
+    // Fetch dengan role filter
+    request(`/transactions?role=${txRoleFilter}`)
+      .then((res) => {
+        setTransactions(Array.isArray(res?.data) ? res.data : []);
+      })
+      .catch((err) => console.error("Gagal ambil transaksi:", err))
+      .finally(() => setTxLoading(false));
+  }, [activeView, txRoleFilter, session]);
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -565,9 +582,17 @@ export default function ProfilePage() {
           >
             <NavIconChart /> Manage listings
           </a>
-          <span className="profile-nav-item profile-nav-item--disabled">
-            <NavIconUsers /> Network <small>(soon)</small>
-          </span>
+          <a
+            href="#orders"
+            className={`profile-nav-item ${activeView === "orders" ? "profile-nav-item--active" : ""}`}
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveView("orders");
+              setSidebarOpen(false);
+            }}
+          >
+            <MailIcon /> Orders
+          </a>
           <div className="profile-nav-label" style={{ marginTop: "1.25rem" }}>
             General
           </div>
@@ -803,9 +828,9 @@ export default function ProfilePage() {
                     <div className="pipeline-wrap">
                       <div className="pipeline-track">
                         {pipelineStats.active > 0 ||
-                        pipelineStats.reserved > 0 ||
-                        pipelineStats.sold > 0 ||
-                        pipelineStats.paused > 0 ? (
+                          pipelineStats.reserved > 0 ||
+                          pipelineStats.sold > 0 ||
+                          pipelineStats.paused > 0 ? (
                           <>
                             {pipelineStats.active > 0 && (
                               <div
@@ -1356,7 +1381,7 @@ export default function ProfilePage() {
                                                     height: 20,
                                                     background:
                                                       deletingPhotoId ===
-                                                      parsePhotoId(photo.url)
+                                                        parsePhotoId(photo.url)
                                                         ? "rgba(0,0,0,0.4)"
                                                         : "rgba(0,0,0,0.65)",
                                                     color: "white",
@@ -1375,7 +1400,7 @@ export default function ProfilePage() {
                                                   aria-label="Hapus foto"
                                                 >
                                                   {deletingPhotoId ===
-                                                  parsePhotoId(photo.url)
+                                                    parsePhotoId(photo.url)
                                                     ? "…"
                                                     : "×"}
                                                 </button>
@@ -1646,6 +1671,126 @@ export default function ProfilePage() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* ══ ORDERS VIEW ══ */}
+            {activeView === "orders" && (
+              <motion.div
+                key="orders"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="profile-page-head" style={{ marginBottom: "1.5rem" }}>
+                  <div>
+                    <h1 className="profile-page-title">Order History</h1>
+                    <p className="profile-page-sub">
+                      Pantau status pembelian dan penjualan material kamu di sini.
+                    </p>
+                  </div>
+
+                  {/* Role Filter Tabs */}
+                  <div className="profile-filter-tabs" style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.25rem', borderRadius: '8px' }}>
+                    {['ALL', 'BUYER', 'SELLER'].map((r) => (
+                      <button
+                        key={r}
+                        className={`profile-filter-btn ${txRoleFilter === r ? 'active' : ''}`}
+                        onClick={() => setTxRoleFilter(r)}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          borderRadius: '6px',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: txRoleFilter === r ? '#fff' : 'transparent',
+                          boxShadow: txRoleFilter === r ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                          color: txRoleFilter === r ? '#0f172a' : '#64748b'
+                        }}
+                      >
+                        {r === 'ALL' ? 'Semua' : r === 'BUYER' ? 'Pembelian' : 'Penjualan'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {txLoading ? (
+                  <div className="tx-empty-state">Loading transactions...</div>
+                ) : transactions.length === 0 ? (
+                  <div className="tx-empty-state" style={{ textAlign: 'center', padding: '4rem 2rem', background: '#f8fafc', borderRadius: '12px', border: '2px dashed #e2e8f0' }}>
+                    <p style={{ color: '#64748b' }}>Belum ada transaksi di kategori ini.</p>
+                    <Link to="/marketplace" className="profile-btn profile-btn--primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
+                      Cari Material
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="orders-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {transactions.map((tx) => (
+                      <Link
+                        key={tx.id}
+                        to={`/transactions/${tx.id}`}
+                        className="order-card"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '1.25rem',
+                          padding: '1.25rem',
+                          background: '#fff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          textDecoration: 'none',
+                          color: 'inherit',
+                          transition: 'transform 0.2s, border-color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                        onMouseOut={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+                      >
+                        {/* Thumbnail */}
+                        <div style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#f1f5f9' }}>
+                          <img
+                            src={tx.primary_photo || "https://placehold.co/80x80?text=No+Image"}
+                            alt={tx.listing?.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+                              {tx.listing?.title}
+                            </h3>
+                            <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#059669' }}>
+                              Rp {tx.total_price?.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+
+                          <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                            {tx.my_role === 'BUYER' ? `Seller: ${tx.seller?.full_name}` : `Buyer: ${tx.buyer?.full_name}`}
+                            <span style={{ margin: '0 0.5rem' }}>•</span>
+                            {new Date(tx.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span className={`manage-status ${toStatusClass(tx.status)}`} style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}>
+                              {tx.status}
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>
+                              ID: #{tx.id.split('-')[0].toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Arrow Icon */}
+                        <div style={{ color: '#cbd5e1' }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
                 )}
               </motion.div>
