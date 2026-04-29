@@ -137,7 +137,7 @@ export default function Hero() {
         </div>
 
         {/* Stats Row */}
-        <motion.div
+        {/* <motion.div
           className="hero-stats-row"
           variants={fadeUp} initial="hidden" animate="show" custom={4}
         >
@@ -152,7 +152,7 @@ export default function Hero() {
               <div className="hero-stat-label">{label}</div>
             </div>
           ))}
-        </motion.div>
+        </motion.div> */}
       </div>
 
       <button type="button" className="scroll-indicator" onClick={scrollToNext} aria-label="Scroll to next section">
