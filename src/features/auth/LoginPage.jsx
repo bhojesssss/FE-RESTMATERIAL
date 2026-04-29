@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from './auth'
 import FormInput from '../../components/common/FormInput'
+import { useLocation } from 'react-router-dom'
+
 
 const pageMotion = {
   initial: { opacity: 0, y: 18 },
@@ -16,6 +18,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const location = useLocation()
+  const from = location.state?.from || '/profile'
   void motion
 
   const canSubmit = useMemo(() => email.trim() && password, [email, password])
@@ -28,7 +32,8 @@ export default function LoginPage() {
     setError('')
     try {
       await login({ email, password })  // FIX: tambah await
-      navigate('/')
+      // navigate('/')
+      navigate(from, { replace: true })
     } catch (err) {
       setError(err?.message || 'Login gagal. Coba lagi.')
     } finally {
