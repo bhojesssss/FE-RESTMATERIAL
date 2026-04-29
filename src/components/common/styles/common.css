@@ -1,0 +1,23 @@
+
+.section-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--oxford);
+  margin-bottom: 0.8rem;
+}
+.section-heading {
+  font-size: clamp(1.9rem, 3.5vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink-black);
+  line-height: 1.1;
+}
+.section-sub {
+  font-size: 1rem;
+  color: #64748b;
+  line-height: 1.75;
+  max-width: 520px;
+}
