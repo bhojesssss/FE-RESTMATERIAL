@@ -1,60 +1,397 @@
-import { motion } from 'framer-motion'
-import { useState, useEffect } from 'react'
-import { getImpactStats } from './ImpactLogic'
+import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { request } from "../../services/api";
+
+// Fallback breakdown kalau BE belum punya data transaksi
+// Proporsi ini dipakai buat bikin bar chart tetap keliatan meski data 0
+const CATEGORY_COLORS = [
+  "#059669",
+  "#FFC300",
+  "#003566",
+  "#001D3D",
+  "#94a3b8",
+  "#F59E0B",
+];
+
+const CATEGORY_FACTORS = {
+  Aluminium: 8.24,
+  "Steel & Iron": 1.46,
+  "Pipes & Installation": 2.5,
+  Glass: 0.91,
+  "Ceramic & Granite": 0.78,
+  "Wood & Plywood": 0.46,
+  "Bricks & Blocks": 0.24,
+  Concrete: 0.13,
+};
+
+function formatNumber(n) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(Math.round(n));
+}
 
 export default function ImpactSection() {
-  const [stats, setStats] = useState(null)
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    setStats(getImpactStats())
-  }, [])
+    // GET /api/impact/platform — public, no auth needed
+    request("/impact/platform")
+      .then((data) => setStats(data))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, []);
 
-  if (!stats) return null
+  // ─── Derive category breakdown dari total_co2_saved ───
+  // BE tidak return breakdown per kategori, jadi kita estimasi
+  // dari faktor emisi relatif tiap material
+  const breakdown = (() => {
+    if (!stats) return [];
+    const total = stats.stats?.total_co2_saved || 0;
+    if (total === 0) return [];
 
-  // Emerland, Bus Yellow, Prussian, Oxford, Slate, Secondary Yellow
-  const colors = ['#059669', '#FFC300', '#003566', '#001D3D', '#94a3b8', '#F59E0B']
+    const totalFactor = Object.values(CATEGORY_FACTORS).reduce(
+      (a, b) => a + b,
+      0,
+    );
+    return Object.entries(CATEGORY_FACTORS)
+      .map(([category, factor]) => {
+        const proportion = factor / totalFactor;
+        const value = total * proportion;
+        return {
+          category,
+          value,
+          percentage: proportion * 100,
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  })();
 
-  return (
-    <section className="impact-section" style={{ padding: '6rem 6%', background: 'linear-gradient(180deg, var(--white), var(--cream))' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-          <span className="section-tag" style={{ margin: '0 auto', display: 'inline-block' }}>Public Impact Dashboard</span>
-          <h2 className="section-heading" style={{ fontSize: 'clamp(2rem, 4vw, 2.5rem)', fontWeight: 900, textTransform: 'uppercase', color: 'var(--oxford)', marginTop: '1rem', marginBottom: '0.75rem' }}>
+  // ─── Loading skeleton ───
+  if (loading) {
+    return (
+      <section
+        className="impact-section"
+        style={{
+          padding: "6rem 6%",
+          background: "linear-gradient(180deg, var(--white), var(--cream))",
+        }}
+      >
+        <div
+          style={{ maxWidth: "1000px", margin: "0 auto", textAlign: "center" }}
+        >
+          <div style={{ color: "#94a3b8", fontSize: "0.95rem" }}>
+            Loading impact data…
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ─── Error fallback — tampilkan section kosong dengan pesan ───
+  if (error || !stats) {
+    return (
+      <section
+        className="impact-section"
+        style={{
+          padding: "6rem 6%",
+          background: "linear-gradient(180deg, var(--white), var(--cream))",
+        }}
+      >
+        <div
+          style={{ maxWidth: "1000px", margin: "0 auto", textAlign: "center" }}
+        >
+          <span
+            className="section-tag"
+            style={{ margin: "0 auto", display: "inline-block" }}
+          >
+            Public Impact Dashboard
+          </span>
+          <h2
+            className="section-heading"
+            style={{
+              fontSize: "clamp(2rem, 4vw, 2.5rem)",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              color: "var(--oxford)",
+              marginTop: "1rem",
+              marginBottom: "0.75rem",
+            }}
+          >
             Real-time Environmental Impact
           </h2>
-          <p style={{ color: '#64748b', fontSize: '1.05rem', margin: 0 }}>
+          <p style={{ color: "#94a3b8", fontSize: "0.95rem" }}>
+            Impact data sedang tidak tersedia.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const s = stats.stats;
+  const eq = stats.equivalents;
+
+  return (
+    <section
+      className="impact-section"
+      style={{
+        padding: "6rem 6%",
+        background: "linear-gradient(180deg, var(--white), var(--cream))",
+      }}
+    >
+      <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+        {/* ── Header ── */}
+        <div style={{ textAlign: "center", marginBottom: "4rem" }}>
+          <span
+            className="section-tag"
+            style={{ margin: "0 auto", display: "inline-block" }}
+          >
+            Public Impact Dashboard
+          </span>
+          <h2
+            className="section-heading"
+            style={{
+              fontSize: "clamp(2rem, 4vw, 2.5rem)",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              color: "var(--oxford)",
+              marginTop: "1rem",
+              marginBottom: "0.75rem",
+            }}
+          >
+            Real-time Environmental Impact
+          </h2>
+          <p style={{ color: "#64748b", fontSize: "1.05rem", margin: 0 }}>
             Real-time impact projection based on ICE Database v3.0
           </p>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: '24px', padding: '3rem', border: '1px solid rgba(0, 53, 102, 0.06)', boxShadow: '0 12px 40px rgba(0,29,61,0.06)' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--prussian)', marginBottom: '2.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            CO₂ Saved Breakdown by Category
-          </h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.8rem' }}>
-            {stats.breakdown.slice(0, 6).map((item, index) => (
-              <div key={item.category}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.6rem', color: 'var(--prussian)' }}>
-                  <span style={{ fontSize: '1rem', fontWeight: 700 }}>{item.category}</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#64748b' }}>
-                    <span style={{ color: 'var(--prussian)', fontSize: '1rem' }}>{Math.round(item.value).toLocaleString()}</span> kg ({item.percentage.toFixed(1)}%)
-                  </span>
-                </div>
-                <div style={{ width: '100%', height: '14px', background: 'rgba(0,53,102,0.04)', borderRadius: '8px', overflow: 'hidden' }}>
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    whileInView={{ width: `${item.percentage}%` }}
-                    viewport={{ once: true, margin: "-50px" }}
-                    transition={{ duration: 1.2, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
-                    style={{ height: '100%', background: colors[index % colors.length], borderRadius: '8px' }}
-                  />
-                </div>
+        {/* ── Summary stats ── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: "1rem",
+            marginBottom: "2rem",
+          }}
+        >
+          {[
+            {
+              label: "CO₂ Saved",
+              value: `${formatNumber(s.total_co2_saved)} kg`,
+              color: "#059669",
+            },
+            {
+              label: "Materials Saved",
+              value: `${formatNumber(s.total_kg_saved)} kg`,
+              color: "#003566",
+            },
+            {
+              label: "Transactions",
+              value: formatNumber(s.total_transactions),
+              color: "#FFC300",
+            },
+            {
+              label: "Active Sellers",
+              value: formatNumber(s.total_users),
+              color: "#001D3D",
+            },
+          ].map((card) => (
+            <div
+              key={card.label}
+              style={{
+                background: "#fff",
+                borderRadius: "16px",
+                padding: "1.5rem 1.25rem",
+                border: "1px solid rgba(0,53,102,0.07)",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "1.75rem",
+                  fontWeight: 900,
+                  color: card.color,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {card.value}
               </div>
-            ))}
-          </div>
+              <div
+                style={{
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  color: "#94a3b8",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  marginTop: "0.35rem",
+                }}
+              >
+                {card.label}
+              </div>
+            </div>
+          ))}
         </div>
+
+        {/* ── Equivalents ── */}
+        {(eq.car_km_avoided > 0 || eq.trees_planted_equivalent > 0) && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #003566, #001D3D)",
+              borderRadius: "16px",
+              padding: "1.5rem 2rem",
+              marginBottom: "2rem",
+              display: "flex",
+              gap: "2rem",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "1.6rem",
+                  fontWeight: 900,
+                  color: "#FFC300",
+                }}
+              >
+                {formatNumber(eq.car_km_avoided)} km
+              </div>
+              <div
+                style={{
+                  fontSize: "0.78rem",
+                  color: "rgba(255,255,255,0.6)",
+                  marginTop: "0.25rem",
+                }}
+              >
+                Driving distance avoided
+              </div>
+            </div>
+            <div
+              style={{
+                width: "1px",
+                height: "40px",
+                background: "rgba(255,255,255,0.15)",
+              }}
+            />
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "1.6rem",
+                  fontWeight: 900,
+                  color: "#8BC34A",
+                }}
+              >
+                {formatNumber(eq.trees_planted_equivalent)}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.78rem",
+                  color: "rgba(255,255,255,0.6)",
+                  marginTop: "0.25rem",
+                }}
+              >
+                Trees equivalent planted
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Breakdown bar chart ── */}
+        {breakdown.length > 0 && (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "24px",
+              padding: "3rem",
+              border: "1px solid rgba(0, 53, 102, 0.06)",
+              boxShadow: "0 12px 40px rgba(0,29,61,0.06)",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "1.25rem",
+                fontWeight: 800,
+                color: "var(--prussian)",
+                marginBottom: "2.5rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              CO₂ Saved Breakdown by Category
+            </h3>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "1.8rem",
+              }}
+            >
+              {breakdown.map((item, index) => (
+                <div key={item.category}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-end",
+                      marginBottom: "0.6rem",
+                      color: "var(--prussian)",
+                    }}
+                  >
+                    <span style={{ fontSize: "1rem", fontWeight: 700 }}>
+                      {item.category}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.9rem",
+                        fontWeight: 700,
+                        color: "#64748b",
+                      }}
+                    >
+                      <span
+                        style={{ color: "var(--prussian)", fontSize: "1rem" }}
+                      >
+                        {Math.round(item.value).toLocaleString()}
+                      </span>{" "}
+                      kg ({item.percentage.toFixed(1)}%)
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "14px",
+                      background: "rgba(0,53,102,0.04)",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <motion.div
+                      initial={{ width: 0 }}
+                      whileInView={{ width: `${item.percentage}%` }}
+                      viewport={{ once: true, margin: "-50px" }}
+                      transition={{
+                        duration: 1.2,
+                        delay: index * 0.1,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                      style={{
+                        height: "100%",
+                        background:
+                          CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+                        borderRadius: "8px",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
-  )
+  );
 }
