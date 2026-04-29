@@ -130,6 +130,9 @@ export default function ProfilePage() {
   const [txLoading, setTxLoading] = useState(false);
   const [txRoleFilter, setTxRoleFilter] = useState("ALL"); // ALL, BUYER, SELLER
 
+  const [impactData, setImpactData] = useState({ total_co2_saved: 0, total_weight_diverted: 0 });
+  const [impactLoading, setImpactLoading] = useState(false);
+
   const [draftListings, setDraftListings] = useState(() => {
     try {
       const draft = localStorage.getItem("rm_listings_draft");
@@ -527,6 +530,40 @@ export default function ProfilePage() {
   }
   if (!session) return null;
 
+  // Letakkan di bawah useEffect Load Listings (sekitar baris 150)
+  // useEffect(() => {
+  //   if (!session) return;
+
+  //   setImpactLoading(true);
+  //   request("/impact/me")
+  //     .then((res) => {
+  //       // Sesuai struktur BE: { success: true, data: { total_co2_saved, total_weight_diverted } }
+  //       if (res?.data) {
+  //         setImpactData(res.data);
+  //       }
+  //     })
+  //     .catch((err) => console.error("Gagal mengambil data impact:", err))
+  //     .finally(() => setImpactLoading(false));
+  // }, [session]);
+  useEffect(() => {
+    if (!session) return;
+
+    setImpactLoading(true);
+    request("/impact/me")
+      .then((res) => {
+        // Tampilkan label biar gampang dicari di Console
+        console.log("🔥 Debug Impact Me:", res);
+
+        // Jika ingin melihat bagian spesifik
+        console.log("📊 Stats:", res.impact);
+        console.log("🌳 Equivalents:", res.equivalents);
+
+        setImpactData(res);
+      })
+      .catch((err) => console.error("Gagal ambil data impact:", err))
+      .finally(() => setImpactLoading(false));
+  }, [session]);
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <motion.main className="profile-dashboard" {...pageMotion}>
@@ -901,14 +938,24 @@ export default function ProfilePage() {
                   >
                     <div className="profile-impact-label">CO₂ impact</div>
                     <div className="profile-impact-value">
-                      {pipelineStats.co2} kg
+                      {/* FIX 1: Akses via impactData.impact.total_co2_saved */}
+                      {impactLoading ? "..." : `${impactData?.impact?.total_co2_saved || 0} kg`}
                     </div>
+
                     <p className="profile-impact-sub">
-                      {pipelineStats.co2 > 0
-                        ? "Estimated emissions avoided through reuse on RESTMATERIAL."
+                      {/* FIX 2: Manfaatkan data equivalents (pohon) biar lebih emosional */}
+                      {impactData?.impact?.total_co2_saved > 0
+                        ? `You've saved the equivalent of planting ${impactData.equivalents?.trees_planted_equivalent || 0} trees!`
                         : "Start selling your surplus materials to build your CO₂ impact!"}
                     </p>
-                    <div className="profile-impact-actions">
+
+                    <div className="profile-impact-actions" style={{ marginTop: 'auto' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '1rem' }}>
+                        {/* FIX 3: Material diverted adalah jumlah kg_sold + kg_bought */}
+                        Material diverted: <strong>
+                          {(impactData?.impact?.kg_sold || 0) + (impactData?.impact?.kg_bought || 0)} kg
+                        </strong>
+                      </div>
                       <Link to="/marketplace" className="profile-impact-btn">
                         View marketplace
                       </Link>
