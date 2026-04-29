@@ -13,6 +13,8 @@ import ListingDetailPage from "./features/marketplace/ListingDetailPage";
 import AboutPage from "./features/landing/AboutPage";
 import CreateListingPage from "./features/dashboard/CreateListingPage";
 import ChatWidget from "./components/common/ChatWidget";
+import TransactionDetailPage from './features/transactions/TransactionDetailPage'
+import RequireAuth from "./components/shared/RequireAuth";
 
 function AppRoutes() {
   const location = useLocation();
@@ -28,11 +30,12 @@ function AppRoutes() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
           <Route path="/marketplace" element={<MarketplacePage />} />
           <Route path="/marketplace/:id" element={<ListingDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
-          <Route path="/create-listing" element={<CreateListingPage />} />
+          <Route path="/create-listing" element={<RequireAuth><CreateListingPage /></RequireAuth>} />
+          <Route path="/transactions/:id" element={<RequireAuth><TransactionDetailPage /></RequireAuth>} />
         </Routes>
       </AnimatePresence>
       {showFooter ? <Footer /> : null}
