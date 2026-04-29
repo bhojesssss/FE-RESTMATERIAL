@@ -127,7 +127,7 @@ function ProgressStepper({ status }) {
     }
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+        <div className="tx-stepper" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             {STEPS.map((step, i) => {
                 const meta = STATUS_META[step]
                 const isDone = currentStep > meta.step
@@ -147,7 +147,7 @@ function ProgressStepper({ status }) {
                             }}>
                                 {isDone ? '✓' : i + 1}
                             </div>
-                            <div style={{
+                            <div className="tx-step-label" style={{
                                 fontSize: '0.6rem', fontWeight: 600, textAlign: 'center',
                                 color: isActive ? '#003566' : isDone ? '#64748b' : '#94a3b8',
                                 maxWidth: '60px', lineHeight: 1.3,
@@ -490,7 +490,7 @@ export default function TransactionDetailPage() {
                 style={{ background: '#f1f5f9', minHeight: 'calc(100vh - var(--nav-height, 64px))' }}
                 {...pageMotion}
             >
-                <div style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem 1.25rem' }}>
+                <div className="tx-container" style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem 1.25rem' }}>
 
                     {/* Back link */}
                     <Link to="/profile" style={{ fontSize: '0.82rem', color: '#64748b', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '1.25rem' }}>
@@ -541,7 +541,7 @@ export default function TransactionDetailPage() {
                         )}
                     </AnimatePresence>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.25rem', alignItems: 'start' }}>
+                    <div className="tx-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.25rem', alignItems: 'start' }}>
 
                         {/* Left column — detail info */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

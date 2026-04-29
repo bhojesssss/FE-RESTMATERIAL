@@ -124,6 +124,7 @@ export default function MarketplacePage() {
   const [citySearch, setCitySearch] = useState('')
   const [sortOpen, setSortOpen] = useState(false)
   const [cityOpen, setCityOpen] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
   const [page, setPage] = useState(1)
 
   const sortRef = useRef(null)
@@ -274,8 +275,21 @@ export default function MarketplacePage() {
         </header>
 
         <div className="market-layout">
+          {/* ── Mobile Filter Toggle ── */}
+          <button
+            type="button"
+            className="filter-toggle-btn"
+            onClick={() => setFilterOpen(o => !o)}
+            aria-expanded={filterOpen}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+            {filterOpen ? 'Hide Filters' : 'Show Filters'}
+          </button>
+
           {/* ── Sidebar ── */}
-          <aside className="filter-card">
+          <aside className={`filter-card${filterOpen ? ' filter-card--open' : ''}`}>
             <div className="filter-head">
               <div className="filter-title">Filters</div>
               <button type="button" className="filter-reset-link" onClick={resetFilters}>Reset</button>

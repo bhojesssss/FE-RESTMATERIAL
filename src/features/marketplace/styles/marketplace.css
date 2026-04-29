@@ -160,6 +160,32 @@
   gap: 1.2rem;
   align-items: start;
 }
+
+/* Mobile filter toggle — hidden on desktop */
+.filter-toggle-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1.5px solid rgba(0, 53, 102, 0.15);
+  background: var(--white);
+  color: var(--prussian);
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  grid-column: 1 / -1;
+}
+.filter-toggle-btn:hover {
+  border-color: rgba(255, 195, 0, 0.55);
+  background: rgba(255, 195, 0, 0.08);
+}
+
 .filter-card {
   position: sticky;
   top: calc(var(--nav-height) + 1.1rem);
@@ -754,6 +780,14 @@
 }
 @media (max-width: 768px) {
 
+  .filter-toggle-btn {
+    display: inline-flex;
+  }
+
+  .market-layout {
+    grid-template-columns: 1fr;
+  }
+
   .market-head {
     flex-direction: column;
     align-items: flex-start;
@@ -765,39 +799,61 @@
   }
 
   .listing-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
+  /* Filter card becomes a collapsible panel */
   .filter-card {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem 1.25rem;
+    display: none;
+    position: relative;
+    top: unset;
     padding: 1rem;
   }
-  
-  .filter-head {
-    grid-column: 1 / -1;
-    margin-bottom: 0;
+
+  .filter-card.filter-card--open {
+    display: block;
   }
-  
+
   .filter-section {
     padding: 0.5rem 0;
     border-top: none;
     border-bottom: 1px solid rgba(0, 53, 102, 0.04);
   }
-  
+
   .filter-reset-btn {
-    grid-column: 1 / -1;
     margin-top: 0.5rem;
     padding: 0.7rem 1rem;
   }
+
+  /* Listing Detail — vertical stacking */
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-right {
+    position: relative;
+    top: unset;
+  }
+
+  .detail-specs {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-@media (max-width: 425px) {
+@media (max-width: 480px) {
 
   .market-shell {
-    padding-left: 5%;
-    padding-right: 5%;
+    padding-left: 4%;
+    padding-right: 4%;
+    padding-top: calc(var(--nav-height) + 1.5rem);
+  }
+
+  .market-title {
+    font-size: 1.5rem;
+  }
+
+  .market-sub {
+    font-size: 0.88rem;
   }
 
   .market-sort {
@@ -818,14 +874,15 @@
     width: 100%;
   }
 
-  .detail-gallery {
-    height: 240px;
+  /* Filter card — full-width collapsible on mobile */
+  .filter-card {
+    display: none;
+    padding: 0.8rem;
+    border-radius: 12px;
   }
 
-  .filter-card {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.25rem 0.8rem;
-    padding: 0.8rem;
+  .filter-card.filter-card--open {
+    display: block;
   }
 
   .filter-label {
@@ -851,11 +908,43 @@
     font-size: 0.75rem;
   }
 
+  /* Cards — 1 column on mobile */
+  .listing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Listing Detail — vertical stacking with padding */
+  .detail-gallery {
+    height: 220px;
+    border-radius: 12px;
+  }
+
+  .detail-title {
+    font-size: 1.25rem;
+  }
+
   .detail-specs {
     grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .detail-price {
+    font-size: 1.35rem;
+  }
+
+  .detail-desc {
+    padding: 1rem;
   }
 
   .seller-card {
     padding: 1rem;
+  }
+
+  .carbon-card {
+    padding: 0.9rem 1rem;
+  }
+
+  .seller-row {
+    grid-auto-columns: minmax(180px, 220px);
   }
 }

@@ -403,6 +403,20 @@ body {
   .mobile-menu-panel {
     display: block;
   }
+
+  /* TransactionDetailPage responsive */
+  .tx-detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tx-stepper {
+    gap: 0 !important;
+  }
+
+  .tx-step-label {
+    font-size: 0.52rem !important;
+    max-width: 50px !important;
+  }
 }
 
 @media (max-width: 425px) {
@@ -424,5 +438,21 @@ body {
   .footer-legal {
     flex-direction: column;
     gap: 0.6rem;
+  }
+
+  /* TransactionDetailPage mobile */
+  .tx-container {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .tx-stepper {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem !important;
+  }
+
+  .tx-step-label {
+    font-size: 0.48rem !important;
+    max-width: 44px !important;
   }
 }

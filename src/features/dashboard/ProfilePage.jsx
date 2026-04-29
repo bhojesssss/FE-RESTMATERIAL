@@ -552,11 +552,11 @@ export default function ProfilePage() {
     request("/impact/me")
       .then((res) => {
         // Tampilkan label biar gampang dicari di Console
-        console.log("🔥 Debug Impact Me:", res);
+        // console.log("🔥 Debug Impact Me:", res);
 
         // Jika ingin melihat bagian spesifik
-        console.log("📊 Stats:", res.impact);
-        console.log("🌳 Equivalents:", res.equivalents);
+        // console.log("📊 Stats:", res.impact);
+        // console.log("🌳 Equivalents:", res.equivalents);
 
         setImpactData(res);
       })
