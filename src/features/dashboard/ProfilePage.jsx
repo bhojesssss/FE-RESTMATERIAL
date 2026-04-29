@@ -495,6 +495,20 @@ export default function ProfilePage() {
     }
   }
 
+  // ── 4. Load transactions (hook HARUS di atas conditional return) ────────
+  useEffect(() => {
+    if (activeView !== "orders" || !session) return;
+
+    setTxLoading(true);
+    // Fetch dengan role filter
+    request(`/transactions?role=${txRoleFilter}`)
+      .then((res) => {
+        setTransactions(Array.isArray(res?.data) ? res.data : []);
+      })
+      .catch((err) => console.error("Gagal ambil transaksi:", err))
+      .finally(() => setTxLoading(false));
+  }, [activeView, txRoleFilter, session]);
+
   // ── Loading guard ────────────────────────────────────────────────────────
   if (sessionLoading && !session) {
     return (
@@ -512,19 +526,6 @@ export default function ProfilePage() {
     );
   }
   if (!session) return null;
-
-  useEffect(() => {
-    if (activeView !== "orders" || !session) return;
-
-    setTxLoading(true);
-    // Fetch dengan role filter
-    request(`/transactions?role=${txRoleFilter}`)
-      .then((res) => {
-        setTransactions(Array.isArray(res?.data) ? res.data : []);
-      })
-      .catch((err) => console.error("Gagal ambil transaksi:", err))
-      .finally(() => setTxLoading(false));
-  }, [activeView, txRoleFilter, session]);
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
