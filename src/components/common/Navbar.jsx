@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { getCachedSession } from '../../features/auth/auth'
+import logo from '../../../asset/white-icon-noBG.svg'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -48,7 +49,7 @@ export default function Navbar() {
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
       <Link to="/" className="nav-logo" style={{ marginRight: 'auto', display: 'flex', alignItems: 'center' }} aria-label="Go to landing page">
-        <img src="/asset/white-icon-noBG.svg" alt="Logo" style={{ height: '36px', width: 'auto' }} />
+        <img src={logo} alt="Logo" style={{ height: '36px', width: 'auto' }} />
         <div>REST<span>MATERIAL</span></div>
       </Link>
 
