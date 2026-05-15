@@ -1,0 +1,491 @@
+/* ── How It Works — Dedicated Page ── */
+
+.hiw-page {
+  min-height: 100vh;
+  padding: calc(var(--nav-height) + 3rem) 6% 5rem;
+  background: linear-gradient(180deg, rgba(250, 250, 248, 0.95), var(--white));
+}
+
+.hiw-inner {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ── Page Header ── */
+.hiw-page-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.hiw-page-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bus-yellow);
+  margin-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(255, 195, 0, 0.4);
+  padding-bottom: 0.4rem;
+}
+
+.hiw-page-title {
+  margin: 0.5rem 0 1rem;
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ink-black);
+  text-transform: uppercase;
+}
+
+.hiw-page-subtitle {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: #64748b;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ── Tab Bar ── */
+.hiw-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid rgba(0, 53, 102, 0.08);
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.hiw-tab {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.25s ease;
+  position: relative;
+  text-align: center;
+}
+
+.hiw-tab:hover {
+  color: var(--oxford);
+}
+
+.hiw-tab--active {
+  color: var(--oxford);
+}
+
+.hiw-tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--bus-yellow);
+  border-radius: 3px 3px 0 0;
+}
+
+/* ── Tab Content ── */
+.hiw-tab-content {
+  min-height: 400px;
+}
+
+/* ── Step Timeline ── */
+.hiw-timeline {
+  position: relative;
+  padding-left: 3rem;
+}
+
+.hiw-timeline::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  bottom: 20px;
+  left: 18px;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--oxford),
+    rgba(0, 53, 102, 0.12)
+  );
+  border-radius: 2px;
+}
+
+.hiw-step {
+  position: relative;
+  padding: 0 0 2.5rem;
+}
+
+.hiw-step:last-child {
+  padding-bottom: 0;
+}
+
+/* Step number circle */
+.hiw-step-num {
+  position: absolute;
+  left: -3rem;
+  top: 2px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--oxford);
+  color: var(--white);
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  box-shadow: 0 4px 12px rgba(0, 29, 61, 0.2);
+}
+
+.hiw-step--no-login .hiw-step-num {
+  background: var(--oxford);
+}
+
+.hiw-step--auto .hiw-step-num {
+  background: #059669;
+}
+
+/* Step card */
+.hiw-step-card {
+  background: var(--white);
+  border: 1px solid rgba(0, 53, 102, 0.08);
+  border-radius: 14px;
+  padding: 1.5rem 1.8rem;
+  box-shadow: 0 8px 28px rgba(0, 29, 61, 0.05);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.hiw-step-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(0, 53, 102, 0.16);
+  box-shadow: 0 14px 40px rgba(0, 29, 61, 0.08);
+}
+
+.hiw-step-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.hiw-step-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ink-black);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* ── Badges ── */
+.hiw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.65rem;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
+.hiw-badge--login {
+  background: rgba(255, 195, 0, 0.14);
+  color: #92600a;
+  border: 1px solid rgba(255, 195, 0, 0.35);
+}
+
+.hiw-badge--no-login {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.hiw-badge--auto {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4338ca;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.hiw-step-desc {
+  font-size: 0.92rem;
+  color: #475569;
+  line-height: 1.7;
+  margin: 0 0 0.75rem;
+}
+
+/* Tips list */
+.hiw-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--bus-yellow);
+  background: rgba(255, 195, 0, 0.05);
+  border-radius: 0 10px 10px 0;
+}
+
+.hiw-tips-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #92600a;
+  margin-bottom: 0.15rem;
+}
+
+.hiw-tips li {
+  font-size: 0.84rem;
+  color: #64748b;
+  line-height: 1.6;
+  list-style: none;
+  padding-left: 1.1rem;
+  position: relative;
+}
+
+.hiw-tips li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--bus-yellow);
+  font-weight: 700;
+}
+
+/* Notes callout */
+.hiw-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 53, 102, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 53, 102, 0.08);
+  margin-top: 0.5rem;
+}
+
+.hiw-note-icon {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  margin-top: 0.1rem;
+}
+
+.hiw-note-text {
+  font-size: 0.84rem;
+  color: #475569;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+/* ── FAQ Accordion ── */
+.hiw-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hiw-faq-item {
+  background: var(--white);
+  border: 1px solid rgba(0, 53, 102, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.hiw-faq-item:hover {
+  border-color: rgba(0, 53, 102, 0.15);
+}
+
+.hiw-faq-item--open {
+  border-color: rgba(0, 53, 102, 0.18);
+  box-shadow: 0 8px 28px rgba(0, 29, 61, 0.06);
+}
+
+.hiw-faq-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.hiw-faq-q {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink-black);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+
+.hiw-faq-chevron {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: #94a3b8;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.hiw-faq-item--open .hiw-faq-chevron {
+  transform: rotate(180deg);
+  color: var(--bus-yellow);
+}
+
+.hiw-faq-answer {
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s ease;
+  max-height: 0;
+  opacity: 0;
+}
+
+.hiw-faq-answer--open {
+  opacity: 1;
+}
+
+.hiw-faq-answer-inner {
+  padding: 0 1.5rem 1.4rem;
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.75;
+}
+
+/* ── Landing Section — CTA button ── */
+.hiw-landing-cta-wrap {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.hiw-landing-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 2.2rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 2px solid var(--bus-yellow);
+  background: var(--bus-yellow);
+  color: var(--ink-black);
+}
+
+.hiw-landing-cta:hover {
+  background: var(--gold);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(255, 195, 0, 0.4);
+}
+
+.hiw-landing-cta svg {
+  transition: transform 0.25s ease;
+}
+
+.hiw-landing-cta:hover svg {
+  transform: translateX(3px);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .hiw-page {
+    padding: calc(var(--nav-height) + 2rem) 5% 4rem;
+  }
+
+  .hiw-tabs {
+    gap: 0;
+  }
+
+  .hiw-tab {
+    padding: 0.85rem 0.75rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+  }
+
+  .hiw-timeline {
+    padding-left: 2.5rem;
+  }
+
+  .hiw-timeline::before {
+    left: 14px;
+  }
+
+  .hiw-step-num {
+    left: -2.5rem;
+    width: 30px;
+    height: 30px;
+    font-size: 0.7rem;
+  }
+
+  .hiw-step-card {
+    padding: 1.2rem 1.25rem;
+  }
+
+  .hiw-step-title {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 425px) {
+  .hiw-page {
+    padding: calc(var(--nav-height) + 1.5rem) 4% 3rem;
+  }
+
+  .hiw-page-title {
+    font-size: clamp(1.5rem, 7vw, 2rem);
+  }
+
+  .hiw-tab {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+  }
+
+  .hiw-timeline {
+    padding-left: 2.2rem;
+  }
+
+  .hiw-timeline::before {
+    left: 12px;
+  }
+
+  .hiw-step-num {
+    left: -2.2rem;
+    width: 26px;
+    height: 26px;
+    font-size: 0.65rem;
+  }
+
+  .hiw-step-card {
+    padding: 1rem 1rem;
+  }
+
+  .hiw-tips {
+    padding: 0.7rem 0.8rem;
+  }
+
+  .hiw-faq-btn {
+    padding: 1rem 1.1rem;
+  }
+
+  .hiw-faq-answer-inner {
+    padding: 0 1.1rem 1.2rem;
+  }
+}

@@ -13,6 +13,7 @@ export const footerCols = [
     heading: 'Company',
     links: [
       { label: 'About Us', to: '/about' },
+      { label: 'How It Works', to: '/how-it-works' },
       { label: 'Home', to: '/' },
     ],
   },
