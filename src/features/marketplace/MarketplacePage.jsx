@@ -37,14 +37,12 @@ const cardVariants = {
   },
 };
 
-// MarketplacePage.jsx
 const CONDITION_TO_ENUM = {
   "New/Surplus": "NEW_SURPLUS",
-  "Pre-loved": "PRELOVED",
+  "Pre-loved/Good Condition": "PRELOVED",
   "Needs Repair": "NEEDS_REPAIR",
 };
 
-// Data lokal di-sort sekali stabil — by uploadedAt desc, fallback by id
 const LOCAL_LISTINGS_SORTED = [...LISTINGS].sort((a, b) => {
   const da = String(a.uploadedAt || a.created_at || "");
   const db = String(b.uploadedAt || b.created_at || "");
@@ -83,7 +81,6 @@ function SkeletonGrid() {
   );
 }
 
-// ── Pagination controls ──────────────────────────────────────────────────────
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null;
 
@@ -92,14 +89,7 @@ function Pagination({ page, totalPages, onChange }) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     if (page <= 3) return [1, 2, 3, 4, "...", totalPages];
     if (page >= totalPages - 2)
-      return [
-        1,
-        "...",
-        totalPages - 3,
-        totalPages - 2,
-        totalPages - 1,
-        totalPages,
-      ];
+      return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
     return [1, "...", page - 1, page, page + 1, "...", totalPages];
   };
 
@@ -196,11 +186,13 @@ export default function MarketplacePage() {
   const cityRef = useRef(null);
   const gridRef = useRef(null);
 
-  // null = pakai LOCAL_LISTINGS_SORTED sebagai fallback, array = dari BE
   const [listingsData, setListingsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState([]);
+  const [categoryTree, setCategoryTree] = useState({});
+  const [availableCities, setAvailableCities] = useState([]);
 
+  // Fetch main categories untuk sidebar checkbox
   useEffect(() => {
     request("/categories/main")
       .then((data) => {
@@ -209,14 +201,46 @@ export default function MarketplacePage() {
         }
       })
       .catch(() => {
-        // Fallback ke MATERIAL_CATEGORIES lokal dengan format { id: name, name }
         setCategoryOptions(
           MATERIAL_CATEGORIES.map((name) => ({ id: name, name })),
         );
       });
   }, []);
 
-  // ── Fetch dari BE ──────────────────────────────────────────────────────────
+  // Fetch category tree untuk mapping parent → children IDs
+  useEffect(() => {
+    request("/categories/tree")
+      .then((data) => {
+        if (data?.tree) {
+          const map = {};
+          data.tree.forEach((parent) => {
+            // Set berisi parent ID sendiri + semua child ID-nya
+            map[parent.id] = new Set([
+              parent.id,
+              ...(parent.children?.map((c) => c.id) ?? []),
+            ]);
+          });
+          setCategoryTree(map);
+        }
+      })
+      .catch(() => {
+        // Kalau gagal, filter category tidak akan bekerja tapi app tetap jalan
+        console.warn("[MarketplacePage] failed to fetch category tree");
+      });
+  }, []);
+
+  useEffect(() => {
+    // Fetch semua listing sekali untuk dapat distinct cities
+    request("/listings?limit=50&sort=newest")
+      .then((res) => {
+        const raw = Array.isArray(res?.data) ? res.data : [];
+        const cities = [...new Set(raw.map((l) => l.city).filter(Boolean))].sort();
+        setAvailableCities(cities.length ? cities : CITIES);
+      })
+      .catch(() => setAvailableCities(CITIES));
+  }, []);
+
+  // Fetch listings dari BE — category TIDAK dikirim ke BE, difilter client-side
   useEffect(() => {
     setLoading(true);
 
@@ -226,13 +250,9 @@ export default function MarketplacePage() {
       const enumVal = CONDITION_TO_ENUM[cond];
       if (enumVal) query.append("condition", enumVal);
     });
-    if (selectedCategories.length === 1) {
-      query.append("category_id", selectedCategories[0]); // kirim UUID
-    }
     if (priceMin > 0) query.append("min_price", String(priceMin));
     if (priceMax < 10_000_000) query.append("max_price", String(priceMax));
 
-    // Sort — BE support: newest, oldest, price_asc, price_desc
     const sortMap = {
       Newest: "newest",
       "Lowest Price": "price_asc",
@@ -241,7 +261,6 @@ export default function MarketplacePage() {
     const beSort = sortMap[sortBy];
     if (beSort) query.append("sort", beSort);
 
-    // Fetch limit besar supaya pagination client-side bisa akurat
     query.append("limit", "50");
 
     request(`/listings?${query.toString()}`)
@@ -259,24 +278,30 @@ export default function MarketplacePage() {
   }, [
     selectedCities,
     selectedConditions,
-    selectedCategories,
     priceMin,
     priceMax,
     sortBy,
+    // selectedCategories SENGAJA tidak di sini — difilter client-side
   ]);
 
   const sourceData = listingsData ?? LOCAL_LISTINGS_SORTED;
 
-  // ── Client-side filter (category + status + volume sort) ──────────────────
+  // Client-side filter: category (pakai tree) + status + volume sort
   const allFiltered = useMemo(() => {
     let items = [...sourceData];
 
-    // if (selectedCategories.length) {
-    //   items = items.filter((l) => {
-    //     const catName = l.category?.name || l.category || "";
-    //     return selectedCategories.includes(catName);
-    //   });
-    // }
+    // Filter by main category menggunakan categoryTree mapping
+    if (selectedCategories.length > 0 && Object.keys(categoryTree).length > 0) {
+      // Kumpulkan semua child IDs dari parent categories yang dipilih
+      const allowedIds = new Set();
+      selectedCategories.forEach((parentId) => {
+        categoryTree[parentId]?.forEach((id) => allowedIds.add(id));
+      });
+      items = items.filter((l) => {
+        const catId = l.category?.id ?? "";
+        return allowedIds.has(catId);
+      });
+    }
 
     if (status !== "All") {
       items = items.filter((l) => {
@@ -294,9 +319,8 @@ export default function MarketplacePage() {
     }
 
     return items;
-  }, [sourceData, selectedCategories, status, sortBy]);
+  }, [sourceData, selectedCategories, categoryTree, status, sortBy]);
 
-  // ── Pagination ─────────────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(allFiltered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
 
@@ -307,7 +331,6 @@ export default function MarketplacePage() {
 
   function handlePageChange(newPage) {
     setPage(newPage);
-    // Scroll ke atas grid
     setTimeout(() => {
       gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 50);
@@ -395,27 +418,24 @@ export default function MarketplacePage() {
                     style={{ width: "160px" }}
                     role="listbox"
                   >
-                    {[
-                      "Newest",
-                      "Lowest Price",
-                      "Highest Price",
-                      "Highest Volume",
-                    ].map((opt) => (
-                      <button
-                        type="button"
-                        key={opt}
-                        role="option"
-                        aria-selected={sortBy === opt}
-                        onClick={() => {
-                          setSortBy(opt);
-                          setSortOpen(false);
-                          setPage(1);
-                        }}
-                        className={`market-dropdown-item${sortBy === opt ? " market-dropdown-item--active" : ""}`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
+                    {["Newest", "Lowest Price", "Highest Price", "Highest Volume"].map(
+                      (opt) => (
+                        <button
+                          type="button"
+                          key={opt}
+                          role="option"
+                          aria-selected={sortBy === opt}
+                          onClick={() => {
+                            setSortBy(opt);
+                            setSortOpen(false);
+                            setPage(1);
+                          }}
+                          className={`market-dropdown-item${sortBy === opt ? " market-dropdown-item--active" : ""}`}
+                        >
+                          {opt}
+                        </button>
+                      ),
+                    )}
                   </div>
                 )}
               </div>
@@ -424,7 +444,6 @@ export default function MarketplacePage() {
         </header>
 
         <div className="market-layout">
-          {/* ── Mobile Filter Toggle ── */}
           <button
             type="button"
             className="filter-toggle-btn"
@@ -447,10 +466,7 @@ export default function MarketplacePage() {
             {filterOpen ? "Hide Filters" : "Show Filters"}
           </button>
 
-          {/* ── Sidebar ── */}
-          <aside
-            className={`filter-card${filterOpen ? " filter-card--open" : ""}`}
-          >
+          <aside className={`filter-card${filterOpen ? " filter-card--open" : ""}`}>
             <div className="filter-head">
               <div className="filter-title">Filters</div>
               <button
@@ -516,11 +532,7 @@ export default function MarketplacePage() {
                   {cityOpen && (
                     <div
                       className="market-dropdown-menu has-custom-scroll"
-                      style={{
-                        width: "100%",
-                        maxHeight: "240px",
-                        overflowY: "auto",
-                      }}
+                      style={{ width: "100%", maxHeight: "240px", overflowY: "auto" }}
                       role="listbox"
                     >
                       <div
@@ -556,7 +568,7 @@ export default function MarketplacePage() {
                       >
                         All Cities
                       </button>
-                      {CITIES.filter((c) =>
+                      {availableCities.filter((c) =>
                         c.toLowerCase().includes(citySearch.toLowerCase()),
                       ).map((c) => (
                         <button
@@ -590,11 +602,7 @@ export default function MarketplacePage() {
                       type="checkbox"
                       checked={selectedCategories.includes(cat.id)}
                       onChange={() =>
-                        toggleInList(
-                          cat.id,
-                          selectedCategories,
-                          setSelectedCategories,
-                        )
+                        toggleInList(cat.id, selectedCategories, setSelectedCategories)
                       }
                     />
                     <span>{cat.name}</span>
@@ -612,11 +620,7 @@ export default function MarketplacePage() {
                       type="checkbox"
                       checked={selectedConditions.includes(cond)}
                       onChange={() =>
-                        toggleInList(
-                          cond,
-                          selectedConditions,
-                          setSelectedConditions,
-                        )
+                        toggleInList(cond, selectedConditions, setSelectedConditions)
                       }
                     />
                     <span>{cond}</span>
@@ -652,9 +656,7 @@ export default function MarketplacePage() {
                   step={50_000}
                   value={priceMax}
                   onChange={(e) => {
-                    setPriceMax(
-                      clamp(Number(e.target.value), priceMin, 10_000_000),
-                    );
+                    setPriceMax(clamp(Number(e.target.value), priceMin, 10_000_000));
                     setPage(1);
                   }}
                 />
@@ -682,35 +684,22 @@ export default function MarketplacePage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              className="filter-reset-btn"
-              onClick={resetFilters}
-            >
+            <button type="button" className="filter-reset-btn" onClick={resetFilters}>
               Reset Filter
             </button>
           </aside>
 
-          {/* ── Grid + Pagination ── */}
           <section className="listing-wrap">
-            {/* Anchor scroll target */}
             <div ref={gridRef} style={{ scrollMarginTop: "80px" }} />
 
             {loading ? (
               <SkeletonGrid />
             ) : paginated.length ? (
               <>
-                <p
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "#94a3b8",
-                    marginBottom: "1rem",
-                  }}
-                >
+                <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginBottom: "1rem" }}>
                   {allFiltered.length} material
                   {allFiltered.length !== 1 ? "s" : ""} found
-                  {totalPages > 1 &&
-                    ` · Halaman ${safePage} dari ${totalPages}`}
+                  {totalPages > 1 && ` · Halaman ${safePage} dari ${totalPages}`}
                 </p>
 
                 <AnimatePresence mode="wait">
@@ -723,11 +712,7 @@ export default function MarketplacePage() {
                     exit={{ opacity: 0, transition: { duration: 0.15 } }}
                   >
                     {paginated.map((l) => (
-                      <ListingCard
-                        key={l.id}
-                        listing={l}
-                        variants={cardVariants}
-                      />
+                      <ListingCard key={l.id} listing={l} variants={cardVariants} />
                     ))}
                   </motion.div>
                 </AnimatePresence>
@@ -747,11 +732,7 @@ export default function MarketplacePage() {
                 <div className="empty-sub">
                   Try changing filters or reset to the default view.
                 </div>
-                <button
-                  type="button"
-                  className="filter-reset-btn"
-                  onClick={resetFilters}
-                >
+                <button type="button" className="filter-reset-btn" onClick={resetFilters}>
                   Reset Filters
                 </button>
               </div>
