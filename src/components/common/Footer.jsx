@@ -19,7 +19,14 @@ export default function Footer() {
             </p>
             <div className="footer-socials">
               {socials.map(({ label, href, icon }) => (
-                <a key={label} href={href} className="social-btn" aria-label={label}>
+                <a
+                  key={label}
+                  href={href}
+                  className="social-btn"
+                  aria-label={label}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {icon}
                 </a>
               ))}
@@ -32,8 +39,8 @@ export default function Footer() {
               <h4>{heading}</h4>
               <ul>
                 {links.map((link) => (
-                  <li key={link}>
-                    <a href="#">{link}</a>
+                  <li key={link.label}>
+                    <Link to={link.to}>{link.label}</Link>
                   </li>
                 ))}
               </ul>
@@ -46,11 +53,6 @@ export default function Footer() {
           <span className="footer-copy">
             &copy; {new Date().getFullYear()} RESTMATERIAL. All rights reserved.
           </span>
-          <div className="footer-legal">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Cookie Policy</a>
-          </div>
         </div>
       </div>
     </footer>
