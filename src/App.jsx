@@ -14,13 +14,14 @@ import AboutPage from "./features/landing/AboutPage";
 import CreateListingPage from "./features/dashboard/CreateListingPage";
 import ChatWidget from "./components/common/ChatWidget";
 import TransactionDetailPage from './features/transactions/TransactionDetailPage'
+import HowItWorksPage from './features/howItWorks/HowItWorksPage'
 import RequireAuth from "./components/shared/RequireAuth";
 
 function AppRoutes() {
   const location = useLocation();
 
   const showFooter =
-    location.pathname === "/" || location.pathname === "/about";
+    location.pathname === "/" || location.pathname === "/about" || location.pathname === "/how-it-works";
 
   return (
     <>
@@ -34,6 +35,7 @@ function AppRoutes() {
           <Route path="/marketplace" element={<MarketplacePage />} />
           <Route path="/marketplace/:id" element={<ListingDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/create-listing" element={<RequireAuth><CreateListingPage /></RequireAuth>} />
           <Route path="/transactions/:id" element={<RequireAuth><TransactionDetailPage /></RequireAuth>} />
         </Routes>

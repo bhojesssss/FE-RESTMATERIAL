@@ -254,6 +254,10 @@
 }
 
 @media (max-width: 1024px) {
+  .how-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
   .why-cards {
     grid-template-columns: repeat(2, 1fr);
   }

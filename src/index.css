@@ -6,5 +6,6 @@
 @import './features/auth/styles/auth.css';
 @import './features/dashboard/styles/dashboard.css';
 @import './features/landing/styles/landing.css';
+@import './features/howItWorks/styles/howItWorks.css';
 @import './features/marketplace/styles/marketplace.css';
 @import './styles/utilities.css';

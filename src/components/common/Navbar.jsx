@@ -55,6 +55,7 @@ export default function Navbar() {
 
       <ul className="nav-links" style={{ marginRight: '2rem' }}>
         <li><Link to="/marketplace">Marketplace</Link></li>
+        <li><Link to="/how-it-works">How It Works</Link></li>
         <li><Link to="/about">About Us</Link></li>
       </ul>
 
@@ -108,6 +109,9 @@ export default function Navbar() {
         <nav className="mobile-menu-nav">
           <Link to="/marketplace" className="mobile-menu-link" onClick={() => setMenuOpen(false)}>
             Marketplace
+          </Link>
+          <Link to="/how-it-works" className="mobile-menu-link" onClick={() => setMenuOpen(false)}>
+            How It Works
           </Link>
           <Link to="/about" className="mobile-menu-link" onClick={() => setMenuOpen(false)}>
             About Us
